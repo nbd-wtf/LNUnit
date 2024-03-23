@@ -884,7 +884,8 @@ message SendRequest {
     repeated FeatureBit dest_features = 15;
 
     /*
-    The payment address of the generated invoice.
+    The payment address of the generated invoice.  This is also called
+    payment secret in specifications (e.g. BOLT 11).
     */
     bytes payment_addr = 16;
 }
@@ -1939,10 +1940,11 @@ message GetInfoResponse {
     reserved 11;
 
     /*
-    Deprecated. The only active chain is bitcoin.
-    A list of active chains the node is connected to
+    A list of active chains the node is connected to. This will only
+    ever contain a single entry since LND will only ever have a single
+    chain backend during its lifetime.
     */
-    repeated Chain chains = 16 [deprecated = true];
+    repeated Chain chains = 16;
 
     // The URIs of the current node.
     repeated string uris = 12;
@@ -2636,6 +2638,9 @@ message PendingHTLC {
 }
 
 message PendingChannelsRequest {
+    // Indicates whether to include the raw transaction hex for
+    // waiting_close_channels.
+    bool include_raw_tx = 1;
 }
 message PendingChannelsResponse {
     message PendingChannel {
@@ -2733,6 +2738,10 @@ message PendingChannelsResponse {
 
         // The transaction id of the closing transaction
         string closing_txid = 4;
+
+        // The raw hex encoded bytes of the closing transaction. Included if
+        // include_raw_tx in the request is true.
+        string closing_tx_hex = 5;
     }
 
     message Commitments {
@@ -3190,7 +3199,8 @@ message MPPRecord {
     A unique, random identifier used to authenticate the sender as the intended
     payer of a multi-path payment. The payment_addr must be the same for all
     subpayments, and match the payment_addr provided in the receiver's invoice.
-    The same payment_addr must be used on all subpayments.
+    The same payment_addr must be used on all subpayments. This is also called
+    payment secret in specifications (e.g. BOLT 11).
     */
     bytes payment_addr = 11;
 
@@ -3769,9 +3779,10 @@ message Invoice {
     bool is_keysend = 25;
 
     /*
-    The payment address of this invoice. This value will be used in MPP
-    payments, and also for newer invoices that always require the MPP payload
-    for added end-to-end security.
+    The payment address of this invoice. This is also called payment secret in
+    specifications (e.g. BOLT 11). This value will be used in MPP payments, and
+    also for newer invoices that always require the MPP payload for added
+    end-to-end security.
     Note: Output only, don't specify for creating an invoice.
     */
     bytes payment_addr = 26;
@@ -3876,9 +3887,9 @@ message AddInvoiceResponse {
     uint64 add_index = 16;
 
     /*
-    The payment address of the generated invoice. This value should be used
-    in all payments for this invoice as we require it for end to end
-    security.
+    The payment address of the generated invoice. This is also called
+    payment secret in specifications (e.g. BOLT 11). This value should be used
+    in all payments for this invoice as we require it for end to end security.
     */
     bytes payment_addr = 17;
 }
@@ -4138,11 +4149,11 @@ message ListPaymentsRequest {
     */
     bool count_total_payments = 5;
 
-    // If set, returns all invoices with a creation date greater than or equal
+    // If set, returns all payments with a creation date greater than or equal
     // to it. Measured in seconds since the unix epoch.
     uint64 creation_date_start = 6;
 
-    // If set, returns all invoices with a creation date less than or equal to
+    // If set, returns all payments with a creation date less than or equal to
     // it. Measured in seconds since the unix epoch.
     uint64 creation_date_end = 7;
 }

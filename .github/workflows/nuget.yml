@@ -2,6 +2,8 @@ name: NuGet Package Deploy
 on:
   push:
     branches: [ "master" ]
+    tags:
+      - '**'
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -22,32 +24,13 @@ jobs:
       run: |
         cd LNUnit
         dotnet pack --configuration Release
-        cd bin/Release/
-        package=$(ls LNUnit*.nupkg)
-        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json
+        package=$(ls bin/Release/LNUnit*.nupkg)
+        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
     - name: Pack and Push NuGet Package LNUnit
       run: |
         cd LNUnit.LND
         dotnet pack --configuration Release
-        cd bin/Release/
-        package=$(ls LNUnit.LND.*.nupkg)
-        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json
-    - name: Test Report
-      uses: dorny/test-reporter@v1
-      if: success() || failure()    # run this step even if previous step failed
-      with:
-        name: Unit Tests            # Name of the check run which will be created
-        path: coverage/test-results.trx   # Path to test results
-        reporter: dotnet-trx        # Format of test results
-    - name: Code Coverage Report
-      uses: irongut/CodeCoverageSummary@v1.3.0
-      with:
-        filename: coverage/**/coverage.cobertura.xml
-        badge: true
-        fail_below_min: false
-        format: markdown
-        hide_branch_rate: false
-        hide_complexity: true
-        indicators: true
-        output: both
-        thresholds: '60 80'
+        package=$(ls bin/Release/LNUnit.LND.*.nupkg)
+        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        
+        

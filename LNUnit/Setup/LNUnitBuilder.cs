@@ -29,6 +29,7 @@ public class LNUnitBuilder : IDisposable
     public Dictionary<string, LNDChannelInterceptorHandler> ChannelHandlers = new();
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
+    private int _waitForBitcoinNodeStartup= 30_000; //ms timeout
 
     public LNUnitBuilder(LNUnitNetworkDefinition c = null, ILogger<LNUnitBuilder>? logger = null,
         IServiceProvider serviceProvider = null)
@@ -135,7 +136,8 @@ public class LNUnitBuilder : IDisposable
             bitcoinNode = listContainers.First(x => x.ID == nodeContainer.ID);
             BitcoinRpcClient = new RPCClient("bitcoin:bitcoin",
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
-            BitcoinRpcClient.HttpClient.Timeout = TimeSpan.FromMilliseconds(10000); //10s
+            _waitForBitcoinNodeStartup = 10000;
+            BitcoinRpcClient.HttpClient.Timeout = TimeSpan.FromMilliseconds(_waitForBitcoinNodeStartup); //10s
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true });
             var utxos = await BitcoinRpcClient.GenerateAsync(200);
         }
