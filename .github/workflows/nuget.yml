@@ -22,14 +22,14 @@ jobs:
     - name: Pack and Push NuGet Package LNUnit
       run: |
         cd LNUnit
-        dotnet pack --configuration Release
+        dotnet pack /p:Version=$GITHUB_REF_NAME --configuration Release
         package=$(ls bin/Release/LNUnit*.nupkg)
-        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        dotnet nuget push $package --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
     - name: Pack and Push NuGet Package LNUnit
       run: |
         cd LNUnit.LND
-        dotnet pack --configuration Release
+        dotnet pack /p:Version=$GITHUB_REF_NAME --configuration Release
         package=$(ls bin/Release/LNUnit.LND.*.nupkg)
-        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        dotnet nuget push $package --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
         
         
