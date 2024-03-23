@@ -2,7 +2,7 @@ name: NuGet Package Deploy
 on:
   push:
     branches: [ "master" ]
-    tags: 
+    tags:
       - '[0-9]*.[0-9]*.[0-9]*'
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
