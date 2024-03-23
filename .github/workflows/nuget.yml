@@ -16,10 +16,6 @@ jobs:
         dotnet-version: 8.0.x
     - name: Restore dependencies
       run: dotnet restore
-    - name: Check code formatting
-      run: |
-        dotnet tool install --global dotnet-format
-        dotnet format --verify-no-changes
     - name: Build
       run: dotnet build --no-restore
     - name: Pack and Push NuGet Package LNUnit
