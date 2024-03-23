@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <Version>1.5.2</Version>
+        <IsPackable>true</IsPackable>
+        <PackageId>LNUnit</PackageId> 
+        <PackageDescription>Lightning Network Unit Testing Framework</PackageDescription>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="NBitcoin" Version="7.0.31"/>
+        <PackageReference Include="ServiceStack" Version="8.0.0" />
+        <PackageReference Include="SharpCompress" Version="0.34.2" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
+        <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/> 
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Controllers\"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\LNUnit.LND\LNUnit.LND.csproj"/>
+    </ItemGroup>
+
+</Project>

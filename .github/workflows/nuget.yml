@@ -1,0 +1,35 @@
+name: NuGet Package Deploy
+on:
+  push:
+    tags:
+      - '[0-9]*.[0-9]*.[0-9]*'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    - name: Restore dependencies
+      run: dotnet restore
+    - name: Build
+      run: dotnet build --no-restore
+    - name: Pack and Push NuGet Package LNUnit
+      run: |
+        cd LNUnit
+        dotnet pack --configuration Release
+        package=$(ls bin/Release/LNUnit*.nupkg)
+        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+    - name: Pack and Push NuGet Package LNUnit
+      run: |
+        cd LNUnit.LND
+        dotnet pack --configuration Release
+        package=$(ls bin/Release/LNUnit.LND.*.nupkg)
+        dotnet nuget push $package  --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        
+        

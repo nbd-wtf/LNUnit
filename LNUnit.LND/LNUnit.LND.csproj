@@ -1,0 +1,70 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <PackageId>LNUnit.LND</PackageId>
+        <Version>1.5.2</Version>
+        <PackageDescription>LNUnit LND Typed Clients</PackageDescription>
+    </PropertyGroup>
+
+    <!--    <ItemGroup>-->
+    <!--        <Compile Remove="Grpc\devrpc\**"/>-->
+    <!--        <EmbeddedResource Remove="Grpc\devrpc\**"/>-->
+    <!--        <None Remove="Grpc\devrpc\**"/>-->
+    <!--    </ItemGroup>-->
+
+
+    <ItemGroup>
+        <PackageReference Include="EndianBinaryIO" Version="1.1.2"/>
+        <PackageReference Include="Google.Protobuf" Version="3.25.1" />
+        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.59.0"/>
+        <PackageReference Include="Grpc.Net.Client" Version="2.59.0"/>
+        <PackageReference Include="Grpc.Net.Common" Version="2.59.0"/>
+
+        <PackageReference Include="Grpc.Tools" Version="2.59.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+
+        <PackageReference Include="AsyncEnumerator" Version="4.0.2"/>
+
+        <PackageReference Include="Microsoft.NETCore.Targets" Version="5.0.0"/>
+
+        <PackageReference Include="NBitcoin" Version="7.0.31" />
+
+        <PackageReference Include="Portable.BouncyCastle" Version="1.9.0"/>
+
+        <PackageReference Include="Serilog" Version="3.1.1" />
+        <PackageReference Include="ServiceStack.Text" Version="8.0.0" />
+        <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0" />
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <Protobuf Include="Grpc\verrpc\verrpc.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\autopilotrpc\autopilot.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\chainrpc\chainnotifier.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\invoicesrpc\invoices.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\signrpc\signer.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\walletrpc\walletkit.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\wtclientrpc\wtclient.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\watchtowerrpc\watchtower.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\routerrpc\router.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\lightning.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\stateservice.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\peersrpc\peers.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\devrpc\dev.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\neutrinorpc\neutrino.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+
+    </ItemGroup>
+
+
+    <!--    <ItemGroup>-->
+    <!--        <Folder Include="Grpc\devrpc\"/>-->
+    <!--        <Folder Include="Grpc\peersrpc\"/>-->
+    <!--    </ItemGroup>-->
+
+</Project>
