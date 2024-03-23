@@ -29,7 +29,7 @@ public class LNUnitBuilder : IDisposable
     public Dictionary<string, LNDChannelInterceptorHandler> ChannelHandlers = new();
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
-    private int _waitForBitcoinNodeStartup= 30_000; //ms timeout
+    private int _waitForBitcoinNodeStartup = 30_000; //ms timeout
 
     public LNUnitBuilder(LNUnitNetworkDefinition c = null, ILogger<LNUnitBuilder>? logger = null,
         IServiceProvider serviceProvider = null)
