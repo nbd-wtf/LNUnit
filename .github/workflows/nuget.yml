@@ -1,4 +1,4 @@
-name: LNUnit .NET Build & Tests (push)
+name: NuGet Package Deploy
 on:
   push:
     branches: [ "master" ]
