@@ -111,7 +111,7 @@ public class DockerTest
     [Category("Docker")]
     public async Task BuildDockerImage()
     {
-        await _client.CreateDockerImageFromPath("./../../../../Docker/lnd", new List<string> { "custom_lnd","custom_lnd:latest" });
+        await _client.CreateDockerImageFromPath("./../../../../Docker/lnd", new List<string> { "custom_lnd", "custom_lnd:latest" });
     }
     [Test]
     [Category("Docker")]

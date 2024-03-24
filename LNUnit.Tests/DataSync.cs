@@ -4,7 +4,7 @@ using ServiceStack.Text;
 
 namespace LNUnit.Tests;
 
-public partial class  ABCLightningScenario
+public partial class ABCLightningScenario
 {
     [Test]
     [Category("Payment")]

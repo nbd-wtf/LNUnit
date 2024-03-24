@@ -165,7 +165,7 @@ public partial class ABCLightningScenario
         //     _LNUnitBuilder.Configuration.DockerNetworkId = "bridge";
         // }
 
-        _LNUnitBuilder.AddBitcoinCoreNode("miner","bitcoin","27.0rc1",pullImage:false);
+        _LNUnitBuilder.AddBitcoinCoreNode("miner", "bitcoin", "27.0rc1", pullImage: false);
         _LNUnitBuilder.AddPolarLNDNode("alice", new List<LNUnitNetworkDefinition.Channel>
         {
             new()
