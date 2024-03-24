@@ -2,15 +2,12 @@
 	<s:Boolean x:Key="/Default/CodeEditing/SuppressUninitializedWarningFix/Enabled/@EntryValue">False</s:Boolean>
 	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/Abbreviations/=LND/@EntryIndexedValue">LND</s:String>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNBolt_002ETests_003B_002A_003B_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002EController_003B_002A_003B_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
+	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNBolt_003B_002A_003B_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BAutopilotrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BChainrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BDevrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BInvoicesrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BLnrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BLNUnit_002EExtentions_002ELNDExtensions_003B_002A/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BLNUnit_002ELND_002ELNDChannelInterceptorHandler_003B_002A/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BLNUnit_002ELND_002ELNDCustomMessageHandler_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BNeutrinorpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BPeersrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BRouterrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
@@ -19,9 +16,7 @@
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BWalletrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BWatchtowerrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ELND_003B_002A_003BWtclientrpc_002E_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ETests_003B_002A_003BLNUnit_002ETests_002ETests_003BResetContainer/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_002ETests_003B_002A_003B_002A_003B_002A/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/Environment/Filtering/ExcludeCoverageFilters/=LNUnit_003B_002A_003BProgram_003B_002A/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=maxpendingchannels/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=noseedbackup/@EntryIndexedValue">True</s:Boolean>
 	<s:Boolean x:Key="/Default/UserDictionary/Words/=restlisten/@EntryIndexedValue">True</s:Boolean>

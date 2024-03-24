@@ -141,7 +141,8 @@ public partial class ABCLightningScenario
         //       f.Database.Migrate();
 
         var tag = "polar_lnd_0_16_3:latest";
-        await _client.CreateDockerImageFromPath("./../../../../Docker/", new List<string> { tag });
+        await _client.CreateDockerImageFromPath("./../../../../Docker/lnd", new List<string> { tag });
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0rc1", new List<string> { "bitcoin:27.0rc1" });
         await _client.Networks.PruneNetworksAsync(new NetworksDeleteUnusedParameters());
         await RemoveContainer("miner");
         await RemoveContainer("alice");
@@ -164,7 +165,7 @@ public partial class ABCLightningScenario
         //     _LNUnitBuilder.Configuration.DockerNetworkId = "bridge";
         // }
 
-        _LNUnitBuilder.AddBitcoinCoreNode();
+        _LNUnitBuilder.AddBitcoinCoreNode("miner","bitcoin","27.0rc1",pullImage:false);
         _LNUnitBuilder.AddPolarLNDNode("alice", new List<LNUnitNetworkDefinition.Channel>
         {
             new()

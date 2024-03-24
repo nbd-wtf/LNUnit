@@ -783,14 +783,14 @@ public static class LNUnitBuilderExtensions
     }
 
 
-    public static LNUnitBuilder AddBitcoinCoreNode(this LNUnitBuilder b, string name = "miner", bool txIndex = true)
+    public static LNUnitBuilder AddBitcoinCoreNode(this LNUnitBuilder b, string name = "miner", string image = "polarlightning/bitcoind", string tag= "26.0", bool txIndex = true,bool pullImage = true)
     {
         return b.AddBitcoinCoreNode(new LNUnitNetworkDefinition.BitcoinNode
         {
-            Image = "polarlightning/bitcoind",
-            Tag = "24.0",
+            Image = image,
+            Tag = tag,
             Name = name,
-            PullImage = true,
+            PullImage = pullImage,
             EnvironmentVariables = new Dictionary<string, string>(),
             Cmd = new List<string>
             {

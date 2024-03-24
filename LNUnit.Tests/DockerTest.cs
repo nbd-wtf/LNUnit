@@ -111,7 +111,13 @@ public class DockerTest
     [Category("Docker")]
     public async Task BuildDockerImage()
     {
-        await _client.CreateDockerImageFromPath("./../../../../Docker/", new List<string> { "polar_lnd_0_16_1_test" });
+        await _client.CreateDockerImageFromPath("./../../../../Docker/lnd", new List<string> { "custom_lnd","custom_lnd:latest" });
+    }
+    [Test]
+    [Category("Docker")]
+    public async Task BuildBitcoin_27_0_rc1_DockerImage()
+    {
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0rc1", new List<string> { "bitcoin:27.0rc1" });
     }
 
 
