@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics;
 using Dasync.Collections;
 using Docker.DotNet;
 using Google.Protobuf;
@@ -117,7 +118,7 @@ public class AbcLightningFixture : IDisposable
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarLNDNode("bob",
@@ -128,7 +129,7 @@ public class AbcLightningFixture : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "alice"
                 }
-            ], imageName: image, tagName: tag, pullImage: false,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         Builder.AddPolarLNDNode("carol",
@@ -139,7 +140,7 @@ public class AbcLightningFixture : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
 
         await Builder.Build(lndRoot: lndRoot);
@@ -156,12 +157,12 @@ public class AbcLightningFixture : IDisposable
         Task.WaitAll(a, b, c);
     }
 
-    private async Task WaitGraphReady()
+    private async Task WaitGraphReady(string fromAlias = "alice")
     {
         var graphReady = false;
         while (!graphReady)
         {
-            var graph = await Builder.GetGraphFromAlias("alice");
+            var graph = await Builder.GetGraphFromAlias(fromAlias);
             if (graph.Nodes.Count < 3)
             {
                 "Graph not ready...".Print();
@@ -411,14 +412,25 @@ public class AbcLightningFixture : IDisposable
     [NonParallelizable]
     public async Task SuccessfulKeysend()
     {
-        var aliceSettings = await Builder.GetLNDSettingsFromContainer("alice");
-        var bobSettings = await Builder.GetLNDSettingsFromContainer("bob");
+        Builder.CancelAllInterceptors();
+        var aliceSettings = await Builder.GetLNDSettingsFromContainer("alice", _lndRoot);
+        var bobSettings = await Builder.GetLNDSettingsFromContainer("bob", _lndRoot);
         var alice = new LNDNodeConnection(aliceSettings);
         var bob = new LNDNodeConnection(bobSettings);
+        // WaitNodesReady();
+        // await WaitGraphReady("bob");
+        // var channels = bob.LightningClient.ListChannels(new ListChannelsRequest() { ActiveOnly = true });
+        // while (!channels.Channels.Any(x => x.RemotePubkey.EqualsIgnoreCase(alice.LocalNodePubKey) && x.Active))
+        // {
+        //     Debug.Print("Channel not up yet.");
+        //     await Task.Delay(250);
+        //     channels = bob.LightningClient.ListChannels(new ListChannelsRequest() { ActiveOnly = true });
+        // }
+        await Task.Delay(1000); //TODO: why? we are not checking channels are up
         var payment = await alice.KeysendPayment(bob.LocalNodePubKey, 10, 100000000, "Hello World", 10,
             new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
 
-        Assert.That(payment.Status == Payment.Types.PaymentStatus.Succeeded);
+        Assert.That(payment.Status, Is.EqualTo(Payment.Types.PaymentStatus.Succeeded));
     }
 
     [Test]
@@ -559,7 +571,7 @@ public class AbcLightningFixture : IDisposable
         Builder.CancelInterceptorOnAlias("bob");
         paymentTask.Status.PrintDump();
         var payment = await paymentTask;
-        await Builder.RestartByAlias("carol", 0, true);
+        await Builder.RestartByAlias("carol", 0, true, lndRoot: _lndRoot);
         await Builder.WaitUntilAliasIsServerReady("carol");
         payment.PrintDump();
         paymentTask.Dispose();
@@ -660,7 +672,7 @@ public class AbcLightningFixture : IDisposable
         Builder.CancelInterceptorOnAlias("bob");
         paymentTask.Status.PrintDump();
         var payment = await paymentTask;
-        await Builder.RestartByAlias("carol", 0, true);
+        await Builder.RestartByAlias("carol", 0, true, lndRoot: _lndRoot);
         await Builder.WaitUntilAliasIsServerReady("carol");
         payment.PrintDump();
         paymentTask.Dispose();

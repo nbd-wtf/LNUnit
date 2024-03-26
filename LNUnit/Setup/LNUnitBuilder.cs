@@ -407,7 +407,7 @@ public class LNUnitBuilder : IDisposable
     }
 
 
-    public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId)
+    public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
     {
         var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(containerId);
         while (inspectionResponse.State.Running != true)
@@ -423,14 +423,14 @@ public class LNUnitBuilder : IDisposable
         //Wait until LND actually has files started
 
 
-        var tlsTar = await GetTarStreamFromFS(containerId, "/home/lnd/.lnd/tls.cert");
+        var tlsTar = await GetTarStreamFromFS(containerId, $"{lndRoot}/tls.cert");
         var txt = GetStringFromTar(tlsTar); //GetStringFromFS(containerId, "/home/lnd/.lnd/tls.cert");
         var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
 
         var adminMacaroonTar =
-            await GetTarStreamFromFS(containerId, "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+            await GetTarStreamFromFS(containerId, $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
         var data = GetBytesFromTar(
-            adminMacaroonTar); //await GetBytesFromFS(containerId, "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+            adminMacaroonTar);
         var adminMacaroonBase64String = Convert.ToBase64String(data);
 
         return new LNDSettings
@@ -568,7 +568,7 @@ public class LNUnitBuilder : IDisposable
     }
 
     public async Task RestartByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false,
-        bool resetChannels = true)
+        bool resetChannels = true, string lndRoot = "/hone/lnd/.lnd")
     {
         await _dockerClient.Containers.RestartContainerAsync(alias, new ContainerRestartParameters
         {
@@ -577,7 +577,7 @@ public class LNUnitBuilder : IDisposable
 
         if (isLND)
         {
-            LNDNodePool?.AddNode(await GetLNDSettingsFromContainer(alias));
+            LNDNodePool?.AddNode(await GetLNDSettingsFromContainer(alias, lndRoot));
 
             var node = await WaitUntilAliasIsServerReady(alias);
             //reset channels
