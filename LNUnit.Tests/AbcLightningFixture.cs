@@ -529,13 +529,13 @@ public class AbcLightningFixture : IDisposable
         {
             var address = alice.LightningClient.NewAddress(new NewAddressRequest() { Type = AddressType.TaprootPubkey }).Address;
             addresses.Add(address);
-            sendManyRequest.AddrToAmount.Add(address,10000);
+            sendManyRequest.AddrToAmount.Add(address, 10000);
         }
 
         alice.LightningClient.SendMany(sendManyRequest);
-        
+
         Builder.NewBlock(10); //fast forward in time
-        
+
         //verify last address got funds
         var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest() { });
         var confirmedAddresses = new List<string>();
@@ -544,11 +544,11 @@ public class AbcLightningFixture : IDisposable
             var exists = addresses.FirstOrDefault(x => x.EqualsIgnoreCase(u.Address));
             if (exists != null)
             {
-                Assert.That(u.AmountSat,Is.EqualTo(10_000));
+                Assert.That(u.AmountSat, Is.EqualTo(10_000));
                 confirmedAddresses.Add(exists);
             }
         }
-        Assert.That(addresses.Count,Is.EqualTo( confirmedAddresses.Count), "Confirmed deposits doesn't match request.");
+        Assert.That(addresses.Count, Is.EqualTo(confirmedAddresses.Count), "Confirmed deposits doesn't match request.");
     }
 
     [Test]
