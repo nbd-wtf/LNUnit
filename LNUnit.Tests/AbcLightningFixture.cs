@@ -197,6 +197,8 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("Payment")]
     [NonParallelizable]
+    [Timeout(5000)]
+
     public async Task FailureNoRouteBecauseFeesAreTooHigh()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
@@ -217,6 +219,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("Payment")]
     [NonParallelizable]
+    [Timeout(5000)]
     public async Task Successful()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("bob", new Invoice
@@ -236,6 +239,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("Balancing")]
     [NonParallelizable]
+    [Timeout(5000)]
     public async Task PoolRebalance()
     {
         var stats = await Builder.LNDNodePool.RebalanceNodePool();
@@ -250,6 +254,7 @@ public class AbcLightningFixture : IDisposable
 
 
     [Test]
+    [Timeout(2000)]
     [Category("Version")]
     [NonParallelizable]
     public async Task CheckLNDVersion()
@@ -262,6 +267,7 @@ public class AbcLightningFixture : IDisposable
 
     [Test]
     [Category("ChannelAcceptor")]
+    [Timeout(5000)]
     [NonParallelizable]
     public async Task ChannelAcceptorDeny()
     {
@@ -353,6 +359,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("Fees")]
     [NonParallelizable]
+    [Timeout(60000)]
     public async Task UpdateChannelPolicyPerNode()
     {
         var acceptorTasks = new List<LNDChannelAcceptor>();
@@ -410,6 +417,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("Payment")]
     [NonParallelizable]
+    [Timeout(5000)]
     public async Task SuccessfulKeysend()
     {
         Builder.CancelAllInterceptors();
@@ -436,6 +444,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("LNUnit")]
     [NonParallelizable]
+    [Timeout(5000)]
     public async Task ExportGraph()
     {
         var data = await Builder.GetGraphFromAlias("alice");
@@ -446,6 +455,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("LNUnit")]
     [NonParallelizable]
+    [Timeout(1000)]
     public async Task GetChannelsFromAlias()
     {
         var alice = await Builder.GetChannelsFromAlias("alice");
@@ -465,6 +475,8 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("LNUnit")]
     [NonParallelizable]
+    [Timeout(5000)]
+
     public async Task GetChannelPointFromAliases()
     {
         var data = Builder.GetChannelPointFromAliases("alice", "bob");
@@ -476,6 +488,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("LNDNodePool")]
     [NonParallelizable]
+    [Timeout(1000)]
     public async Task GetNodeConnectionFromPool()
     {
         var data = Builder.LNDNodePool.GetLNDNodeConnection();
@@ -490,6 +503,7 @@ public class AbcLightningFixture : IDisposable
     [Test]
     [Category("Fees")]
     [NonParallelizable]
+    [Timeout(5000)]
     public async Task UpdateChannelPolicy()
     {
         var data = Builder.UpdateGlobalFeePolicyOnAlias("alice", new LNUnitNetworkDefinition.Channel());
@@ -501,6 +515,8 @@ public class AbcLightningFixture : IDisposable
     [Category("Payment")]
     [Category("Invoice")]
     [NonParallelizable]
+    [Timeout(5000)]
+
     public async Task FailureInvoiceTimeout()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
@@ -544,6 +560,7 @@ public class AbcLightningFixture : IDisposable
     [Category("Payment")]
     [Category("Interceptor")]
     [NonParallelizable]
+    [Timeout(15000)]
     public async Task FailureReasonNoRoute()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
@@ -584,6 +601,7 @@ public class AbcLightningFixture : IDisposable
     [Category("Payment")]
     [Category("Interceptor")]
     [NonParallelizable]
+    [Timeout(30000)]
     public async Task InterceptorTest()
     {
         List<AddInvoiceResponse> invoices = new();
@@ -642,6 +660,7 @@ public class AbcLightningFixture : IDisposable
     [Category("Payment")]
     [Category("Interceptor")]
     [NonParallelizable]
+    [Timeout(15000)]
     public async Task GetPaymentFailureData()
     {
         //Setup
@@ -773,6 +792,7 @@ public class AbcLightningFixture : IDisposable
     [Category("Invoice")]
     [Category("Sync")]
     [NonParallelizable]
+    [Timeout(15000)]
     public async Task ListInvoiceAndPaymentPaging()
     {
         var invoices = await Builder.GeneratePaymentsRequestFromAlias("alice", 10, new Invoice
@@ -830,6 +850,7 @@ public class AbcLightningFixture : IDisposable
     [Category("Invoice")]
     [Category("Sync")]
     [NonParallelizable]
+    [Timeout(15000)]
     public async Task ListInvoiceAndPaymentNoDatePage()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
