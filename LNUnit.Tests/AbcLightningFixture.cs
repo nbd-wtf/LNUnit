@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Dasync.Collections;
 using Docker.DotNet;
 using Google.Protobuf;
+using Google.Protobuf.Collections;
 using Grpc.Core;
 using Lnrpc;
 using LNUnit.Extentions;
@@ -509,6 +510,45 @@ public class AbcLightningFixture : IDisposable
         var data = Builder.UpdateGlobalFeePolicyOnAlias("alice", new LNUnitNetworkDefinition.Channel());
         data.PrintDump();
         Assert.That(data.FailedUpdates.Count == 0);
+    }
+
+    [Test]
+    [Timeout(10000)]
+    public async Task SendMany_Onchain()
+    {
+        var alice = Builder.GetNodeFromAlias("alice");
+        var addresses = new List<string>();
+        var sendManyRequest = new SendManyRequest()
+        {
+            SatPerVbyte = 10,
+            Label = "Test send to multiple",
+            SpendUnconfirmed = true,
+        };
+        //make destinations
+        for (int i = 0; i < 10; i++)
+        {
+            var address = alice.LightningClient.NewAddress(new NewAddressRequest() { Type = AddressType.TaprootPubkey }).Address;
+            addresses.Add(address);
+            sendManyRequest.AddrToAmount.Add(address,10000);
+        }
+
+        alice.LightningClient.SendMany(sendManyRequest);
+        
+        Builder.NewBlock(10); //fast forward in time
+        
+        //verify last address got funds
+        var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest() { });
+        var confirmedAddresses = new List<string>();
+        foreach (var u in unspend.Utxos)
+        {
+            var exists = addresses.FirstOrDefault(x => x.EqualsIgnoreCase(u.Address));
+            if (exists != null)
+            {
+                Assert.That(u.AmountSat,Is.EqualTo(10_000));
+                confirmedAddresses.Add(exists);
+            }
+        }
+        Assert.That(addresses.Count,Is.EqualTo( confirmedAddresses.Count), "Confirmed deposits doesn't match request.");
     }
 
     [Test]
