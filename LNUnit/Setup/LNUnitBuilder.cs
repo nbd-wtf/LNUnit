@@ -672,7 +672,7 @@ public class LNUnitBuilder : IDisposable
         }
 
         while (!ready.IsServerReady) await Task.Delay(100);
-        return ready;
+        return ready.Clone();
     }
 
     public async Task<ChannelGraph> GetGraphFromAlias(string alias)

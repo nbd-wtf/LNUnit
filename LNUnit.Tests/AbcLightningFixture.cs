@@ -565,7 +565,7 @@ public class AbcLightningFixture : IDisposable
         });
 
         "Carol shutdown".Print();
-        await Builder.ShutdownByAlias("carol", 0);
+        await Builder.ShutdownByAlias("carol", 0, true);
         await Task.Delay(1000);
         paymentTask.Status.PrintDump();
         Builder.CancelInterceptorOnAlias("bob");
@@ -666,7 +666,7 @@ public class AbcLightningFixture : IDisposable
         });
 
         "Carol shutdown".Print();
-        await Builder.ShutdownByAlias("carol", 0);
+        await Builder.ShutdownByAlias("carol", 0, true);
         await Task.Delay(1000);
         paymentTask.Status.PrintDump();
         Builder.CancelInterceptorOnAlias("bob");
@@ -683,7 +683,7 @@ public class AbcLightningFixture : IDisposable
         var res = new List<PaymentStats>();
 
         var consolidated = new Dictionary<string, (int Success, int Fail)>();
-        var client = (await Builder.GetLNDSettingsFromContainer("alice")).GetClient();
+        var client = (await Builder.GetLNDSettingsFromContainer("alice", _lndRoot)).GetClient();
         var payments = await client.LightningClient.ListPaymentsAsync(new ListPaymentsRequest
         {
             //CountTotalPayments = true,
