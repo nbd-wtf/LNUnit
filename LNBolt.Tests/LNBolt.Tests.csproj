@@ -9,9 +9,9 @@
 
     <ItemGroup>
         <PackageReference Include="EndianBinaryIO" Version="1.1.2"/>
-        <PackageReference Include="Microsoft.ClearScript.V8.Native.osx-arm64" Version="7.4.4" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
-        <PackageReference Include="NUnit" Version="3.14.0" />
+        <PackageReference Include="Microsoft.ClearScript.V8.Native.osx-arm64" Version="7.4.4"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0"/>
+        <PackageReference Include="NUnit" Version="3.14.0"/>
         <PackageReference Include="NUnit3TestAdapter" Version="4.5.0"/>
         <PackageReference Include="org.ldk" Version="0.0.121.2"/>
         <PackageReference Include="coverlet.collector" Version="3.1.2">

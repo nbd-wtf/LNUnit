@@ -29,7 +29,6 @@ public class LNUnitBuilder : IDisposable
     public Dictionary<string, LNDChannelInterceptorHandler> ChannelHandlers = new();
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
-    private int _waitForBitcoinNodeStartup = 30_000; //ms timeout
 
     public LNUnitBuilder(LNUnitNetworkDefinition c = null, ILogger<LNUnitBuilder>? logger = null,
         IServiceProvider serviceProvider = null)
@@ -38,6 +37,8 @@ public class LNUnitBuilder : IDisposable
         _logger = logger;
         _serviceProvider = serviceProvider;
     }
+
+    public int WaitForBitcoinNodeStartupTimeout { get; set; } = 30_000; //ms timeout
 
     public bool IsBuilt { get; internal set; }
     public bool IsDestoryed { get; internal set; }
@@ -94,7 +95,7 @@ public class LNUnitBuilder : IDisposable
         IsDestoryed = true;
     }
 
-    public async Task Build(bool setupNetwork = false)
+    public async Task Build(bool setupNetwork = false, string lndRoot = "/home/lnd/.lnd")
     {
         _logger?.LogInformation("Building LNUnit scenerio.");
         //Validation
@@ -136,8 +137,10 @@ public class LNUnitBuilder : IDisposable
             bitcoinNode = listContainers.First(x => x.ID == nodeContainer.ID);
             BitcoinRpcClient = new RPCClient("bitcoin:bitcoin",
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
-            _waitForBitcoinNodeStartup = 10000;
-            BitcoinRpcClient.HttpClient.Timeout = TimeSpan.FromMilliseconds(_waitForBitcoinNodeStartup); //10s
+            WaitForBitcoinNodeStartupTimeout = 30000;
+            BitcoinRpcClient.HttpClient = new HttpClient
+            { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
+
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true });
             var utxos = await BitcoinRpcClient.GenerateAsync(200);
         }
@@ -168,16 +171,16 @@ public class LNUnitBuilder : IDisposable
             var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
             var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
 
-            var txt = await GetStringFromFS(n.DockerContainerId, "/home/lnd/.lnd/tls.cert");
+            var txt = await GetStringFromFS(n.DockerContainerId, $"{lndRoot}/tls.cert");
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
             var data = await GetBytesFromFS(n.DockerContainerId,
-                "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+                $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
             var adminMacaroonBase64String = Convert.ToBase64String(data);
 
 
             var adminMacaroonTar =
                 await GetTarStreamFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
 
             var lndConfig = new LNDSettings
             {
@@ -207,19 +210,19 @@ public class LNUnitBuilder : IDisposable
                 });
                 dependentContainer.DockerContainerId = nodeContainer.ID;
                 var dataReadonly = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/readonly.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/readonly.macaroon");
                 var readonlyBase64String = Convert.ToBase64String(dataReadonly);
 
                 var invoices = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/invoices.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/invoices.macaroon");
                 var chainnotifier = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/chainnotifier.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/chainnotifier.macaroon");
                 var signer = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/signer.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/signer.macaroon");
                 var walletkit = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/walletkit.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/walletkit.macaroon");
                 var router = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/router.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/router.macaroon");
                 File.WriteAllBytes("./loopserver-test/tls.cert", Convert.FromBase64String(tlsCertBase64));
                 File.WriteAllBytes("./loopserver-test/admin.macaroon",
                     Convert.FromBase64String(adminMacaroonBase64String));
@@ -262,9 +265,19 @@ public class LNUnitBuilder : IDisposable
             n.DockerContainerId = nodeContainer.ID;
             var success =
                 await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
-            var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
-            var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
-            var basePath = !n.Image.Contains("lightning-terminal") ? "/home/lnd/.lnd" : "/root/lnd/.lnd";
+            //Not always having IP yet.
+            var ipAddress = string.Empty;
+            ContainerInspectResponse? inspectionResponse = null;
+            while (ipAddress.IsEmpty())
+            {
+                inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
+                ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
+            }
+
+            var basePath =
+                !n.Image.Contains("lightning-terminal")
+                    ? lndRoot
+                    : "/root/lnd/.lnd"; // "/home/lnd/.lnd" : "/root/lnd/.lnd";
             if (n.Image.Contains("lightning-terminal")) await Task.Delay(2000);
             var txt = await GetStringFromFS(n.DockerContainerId, $"{basePath}/tls.cert");
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
@@ -309,6 +322,12 @@ public class LNUnitBuilder : IDisposable
             {
                 var remotes = LNDNodePool.ReadyNodes.Where(x => x.LocalAlias != localNode.LocalAlias).ToImmutableList();
                 foreach (var remoteNode in remotes) await ConnectPeers(localNode, remoteNode);
+            }
+
+            while (LNDNodePool.ReadyNodes.Count < Configuration.LNDNodes.Count)
+            {
+                await Task.Delay(250);
+                if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
 
             //Setup Channels (this includes sending funds and waiting)
@@ -388,7 +407,7 @@ public class LNUnitBuilder : IDisposable
     }
 
 
-    public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId)
+    public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
     {
         var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(containerId);
         while (inspectionResponse.State.Running != true)
@@ -404,14 +423,14 @@ public class LNUnitBuilder : IDisposable
         //Wait until LND actually has files started
 
 
-        var tlsTar = await GetTarStreamFromFS(containerId, "/home/lnd/.lnd/tls.cert");
+        var tlsTar = await GetTarStreamFromFS(containerId, $"{lndRoot}/tls.cert");
         var txt = GetStringFromTar(tlsTar); //GetStringFromFS(containerId, "/home/lnd/.lnd/tls.cert");
         var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
 
         var adminMacaroonTar =
-            await GetTarStreamFromFS(containerId, "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+            await GetTarStreamFromFS(containerId, $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
         var data = GetBytesFromTar(
-            adminMacaroonTar); //await GetBytesFromFS(containerId, "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+            adminMacaroonTar);
         var adminMacaroonBase64String = Convert.ToBase64String(data);
 
         return new LNDSettings
@@ -549,7 +568,7 @@ public class LNUnitBuilder : IDisposable
     }
 
     public async Task RestartByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false,
-        bool resetChannels = true)
+        bool resetChannels = true, string lndRoot = "/hone/lnd/.lnd")
     {
         await _dockerClient.Containers.RestartContainerAsync(alias, new ContainerRestartParameters
         {
@@ -558,7 +577,7 @@ public class LNUnitBuilder : IDisposable
 
         if (isLND)
         {
-            LNDNodePool?.AddNode(await GetLNDSettingsFromContainer(alias));
+            LNDNodePool?.AddNode(await GetLNDSettingsFromContainer(alias, lndRoot));
 
             var node = await WaitUntilAliasIsServerReady(alias);
             //reset channels
@@ -653,7 +672,7 @@ public class LNUnitBuilder : IDisposable
         }
 
         while (!ready.IsServerReady) await Task.Delay(100);
-        return ready;
+        return ready.Clone();
     }
 
     public async Task<ChannelGraph> GetGraphFromAlias(string alias)
@@ -783,7 +802,8 @@ public static class LNUnitBuilderExtensions
     }
 
 
-    public static LNUnitBuilder AddBitcoinCoreNode(this LNUnitBuilder b, string name = "miner", string image = "polarlightning/bitcoind", string tag = "26.0", bool txIndex = true, bool pullImage = true)
+    public static LNUnitBuilder AddBitcoinCoreNode(this LNUnitBuilder b, string name = "miner",
+        string image = "polarlightning/bitcoind", string tag = "26.0", bool txIndex = true, bool pullImage = true)
     {
         return b.AddBitcoinCoreNode(new LNUnitNetworkDefinition.BitcoinNode
         {
@@ -826,8 +846,8 @@ public static class LNUnitBuilderExtensions
     public static LNUnitBuilder AddPolarLNDNode(this LNUnitBuilder b, string aliasHostname,
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
-        string tagName = "0.16.2-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false)
+        string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
+        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null)
     {
         var cmd = new List<string>
         {
@@ -855,6 +875,15 @@ public static class LNUnitBuilderExtensions
             "--gossip.max-channel-update-burst=100",
             "--gossip.channel-update-interval=1s"
         };
+
+        if (!postgresDSN.IsEmpty())
+        {
+            cmd.Add("--db.backend=postgres");
+            cmd.Add($"--db.postgres.dsn={postgresDSN}");
+            cmd.Add("--db.postgres.timeout=300s");
+            cmd.Add("--db.postgres.maxconnections=16");
+        }
+
         if (gcInvoiceOnStartup) cmd.Add("--gc-canceled-invoices-on-startup");
         if (gcInvoiceOnFly) cmd.Add("--gc-canceled-invoices-on-the-fly");
 
@@ -868,7 +897,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -924,7 +953,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -968,7 +997,7 @@ public static class LNUnitBuilderExtensions
         };
 
 
-        var node = new LNUnitNetworkDefinition.CLNNode()
+        var node = new LNUnitNetworkDefinition.CLNNode
         {
             Image = imageName,
             Tag = tagName,
@@ -976,7 +1005,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -1048,7 +1077,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -1109,7 +1138,7 @@ $ docker run -d \
                 },
                 ExposedPorts = new Dictionary<string, EmptyStruct>
                 {
-                    {"11009", new EmptyStruct()}
+                    { "11009", new EmptyStruct() }
                 },
 
                 Binds = new List<string> { $"{Path.GetFullPath("./loopserver-test/")}:/home/lnd/.lnd/" },

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Grpc.Core;
 using Routerrpc;
 
@@ -17,7 +18,8 @@ public class LNDSimpleHtlcInterceptorHandler : IDisposable
         Func<ForwardHtlcInterceptRequest, Task<ForwardHtlcInterceptResponse>> interceptLogic)
     {
         Node = connection;
-        _task = Task.Factory.StartNew(AttachInterceptor, _cancellationTokenSource.Token);
+        _task = Task.Factory.StartNew(AttachInterceptor, _cancellationTokenSource.Token,
+            TaskCreationOptions.LongRunning, TaskScheduler.Current);
         OnIntercept = interceptLogic;
         while (!Running)
             Task.Delay(100).Wait();
@@ -42,17 +44,20 @@ public class LNDSimpleHtlcInterceptorHandler : IDisposable
 
     private async Task AttachInterceptor()
     {
+        Debug.Print($"AttachInterceptor: {Node.LocalAlias}");
         try
         {
             using (var streamingEvents =
                    Node.RouterClient.HtlcInterceptor(cancellationToken: _cancellationTokenSource.Token))
             {
                 Running = true;
-                while (await streamingEvents.ResponseStream.MoveNext())
+                while (await streamingEvents.ResponseStream.MoveNext().ConfigureAwait(false))
                 {
+                    Debug.Print($"Event: {Node.LocalAlias}");
+
                     var message = streamingEvents.ResponseStream.Current;
                     var result = OnIntercept(message);
-                    await streamingEvents.RequestStream.WriteAsync(await result);
+                    await streamingEvents.RequestStream.WriteAsync(await result).ConfigureAwait(false);
                     InterceptCount++;
                 }
             }
