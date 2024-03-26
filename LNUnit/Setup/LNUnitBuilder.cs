@@ -26,7 +26,6 @@ public class LNUnitBuilder : IDisposable
     private readonly ILogger<LNUnitBuilder>? _logger;
     private readonly IServiceProvider? _serviceProvider;
     private bool _loopLNDReady;
-    public int WaitForBitcoinNodeStartupTimeout { get; set; } = 30_000; //ms timeout
     public Dictionary<string, LNDChannelInterceptorHandler> ChannelHandlers = new();
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
@@ -38,6 +37,8 @@ public class LNUnitBuilder : IDisposable
         _logger = logger;
         _serviceProvider = serviceProvider;
     }
+
+    public int WaitForBitcoinNodeStartupTimeout { get; set; } = 30_000; //ms timeout
 
     public bool IsBuilt { get; internal set; }
     public bool IsDestoryed { get; internal set; }
@@ -137,7 +138,8 @@ public class LNUnitBuilder : IDisposable
             BitcoinRpcClient = new RPCClient("bitcoin:bitcoin",
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
             WaitForBitcoinNodeStartupTimeout = 30000;
-            BitcoinRpcClient.HttpClient = new HttpClient() { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
+            BitcoinRpcClient.HttpClient = new HttpClient
+            { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
 
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true });
             var utxos = await BitcoinRpcClient.GenerateAsync(200);
@@ -327,6 +329,7 @@ public class LNUnitBuilder : IDisposable
                 await Task.Delay(250);
                 if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
+
             //Setup Channels (this includes sending funds and waiting)
             foreach (var n in Configuration.LNDNodes) //TODO: can do multiple at once
             {

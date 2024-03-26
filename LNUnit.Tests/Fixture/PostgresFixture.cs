@@ -58,18 +58,13 @@ public class PostgresInstanceFixture
 
     internal void AddDb(string dbName)
     {
+        LNDConnectionStrings.Remove(dbName);
         using (NpgsqlConnection connection = new(DbConnectionStringDotNet))
         {
             connection.Open();
-            using var checkIfExistsCommand =
-                new NpgsqlCommand($"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{dbName}'", connection);
-            var result = checkIfExistsCommand.ExecuteScalar();
-
-            if (result == null)
-            {
-                using var command = new NpgsqlCommand($"CREATE DATABASE \"{dbName}\"", connection);
-                command.ExecuteNonQuery();
-            }
+            using var command = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{dbName}\"; CREATE DATABASE \"{dbName}\"",
+                connection);
+            command.ExecuteNonQuery();
         }
 
         LNDConnectionStrings.Add(dbName,

@@ -18,8 +18,10 @@ using Assert = NUnit.Framework.Assert;
 
 namespace LNUnit.Test.Fixtures;
 
-[TestFixture("postgres")]
-[TestFixture("boltdb")]
+[TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+[TestFixture("boltdb", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+[TestFixture("postgres", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
+[TestFixture("boltdb", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
 public class AbcLightningFixture : IDisposable
 {
     [SetUp]
@@ -55,18 +57,25 @@ public class AbcLightningFixture : IDisposable
         }
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await SetupNetwork("custom_lnd", "latest", "/home/lnd/.lnd");
+        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
-    public AbcLightningFixture(string dbType)
+    public AbcLightningFixture(string dbType,
+        string lndImage = "custom_lnd",
+        string tag = "latest",
+        string lndRoot = "/root/.lnd",
+        bool pullImage = false
+    )
     {
         _dbType = dbType;
+        _lndImage = lndImage;
+        _tag = tag;
+        _lndRoot = lndRoot;
+        _pullImage = pullImage;
     }
 
     public string DbContainerName { get; set; } = "postgres";
     private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
-    private string _containerId;
-    private string _ip;
 
     private ServiceProvider _serviceProvider;
 
@@ -246,7 +255,6 @@ public class AbcLightningFixture : IDisposable
     {
         var n = Builder.LNDNodePool.ReadyNodes.First();
         var info = n.LightningClient.GetInfo(new GetInfoRequest());
-        Assert.That(info.Version == "0.17.4-beta commit=v0.17.4-beta");
         info.Version.Print();
     }
 
@@ -720,6 +728,10 @@ public class AbcLightningFixture : IDisposable
 
     private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
     private readonly string _dbType;
+    private readonly string _lndImage;
+    private readonly string _tag;
+    private readonly string _lndRoot;
+    private readonly bool _pullImage;
 
     private async Task<string> ToAlias(LNDNodeConnection c, string remotePubkey)
     {
