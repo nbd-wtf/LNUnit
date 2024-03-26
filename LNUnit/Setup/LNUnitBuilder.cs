@@ -94,7 +94,7 @@ public class LNUnitBuilder : IDisposable
         IsDestoryed = true;
     }
 
-    public async Task Build(bool setupNetwork = false)
+    public async Task Build(bool setupNetwork = false, string lndRoot = "/home/lnd/.lnd")
     {
         _logger?.LogInformation("Building LNUnit scenerio.");
         //Validation
@@ -168,16 +168,16 @@ public class LNUnitBuilder : IDisposable
             var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
             var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
 
-            var txt = await GetStringFromFS(n.DockerContainerId, "/home/lnd/.lnd/tls.cert");
+            var txt = await GetStringFromFS(n.DockerContainerId, $"{lndRoot}/tls.cert");
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
             var data = await GetBytesFromFS(n.DockerContainerId,
-                "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+                $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
             var adminMacaroonBase64String = Convert.ToBase64String(data);
 
 
             var adminMacaroonTar =
                 await GetTarStreamFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
 
             var lndConfig = new LNDSettings
             {
@@ -207,19 +207,19 @@ public class LNUnitBuilder : IDisposable
                 });
                 dependentContainer.DockerContainerId = nodeContainer.ID;
                 var dataReadonly = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/readonly.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/readonly.macaroon");
                 var readonlyBase64String = Convert.ToBase64String(dataReadonly);
 
                 var invoices = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/invoices.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/invoices.macaroon");
                 var chainnotifier = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/chainnotifier.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/chainnotifier.macaroon");
                 var signer = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/signer.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/signer.macaroon");
                 var walletkit = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/walletkit.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/walletkit.macaroon");
                 var router = await GetBytesFromFS(n.DockerContainerId,
-                    "/home/lnd/.lnd/data/chain/bitcoin/regtest/router.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/router.macaroon");
                 File.WriteAllBytes("./loopserver-test/tls.cert", Convert.FromBase64String(tlsCertBase64));
                 File.WriteAllBytes("./loopserver-test/admin.macaroon",
                     Convert.FromBase64String(adminMacaroonBase64String));
@@ -262,9 +262,16 @@ public class LNUnitBuilder : IDisposable
             n.DockerContainerId = nodeContainer.ID;
             var success =
                 await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
-            var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
-            var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
-            var basePath = !n.Image.Contains("lightning-terminal") ? "/home/lnd/.lnd" : "/root/lnd/.lnd";
+            //Not always having IP yet.
+            var ipAddress = string.Empty;
+            ContainerInspectResponse? inspectionResponse = null;
+            while (ipAddress.IsEmpty())
+            {
+                inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
+                ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
+            }
+
+            var basePath = !n.Image.Contains("lightning-terminal") ? lndRoot : "/root/lnd/.lnd"; // "/home/lnd/.lnd" : "/root/lnd/.lnd";
             if (n.Image.Contains("lightning-terminal")) await Task.Delay(2000);
             var txt = await GetStringFromFS(n.DockerContainerId, $"{basePath}/tls.cert");
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
@@ -826,8 +833,8 @@ public static class LNUnitBuilderExtensions
     public static LNUnitBuilder AddPolarLNDNode(this LNUnitBuilder b, string aliasHostname,
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
-        string tagName = "0.16.2-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false)
+        string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
+        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string postgresDSN = null)
     {
         var cmd = new List<string>
         {
@@ -855,6 +862,14 @@ public static class LNUnitBuilderExtensions
             "--gossip.max-channel-update-burst=100",
             "--gossip.channel-update-interval=1s"
         };
+
+        if (!postgresDSN.IsEmpty())
+        {
+            cmd.Add("--db.backend=postgres");
+            cmd.Add($"--db.postgres.dsn={postgresDSN}");
+            cmd.Add($"--db.postgres.timeout=300s");
+            cmd.Add($"--db.postgres.maxconnections=16");
+        }
         if (gcInvoiceOnStartup) cmd.Add("--gc-canceled-invoices-on-startup");
         if (gcInvoiceOnFly) cmd.Add("--gc-canceled-invoices-on-the-fly");
 
