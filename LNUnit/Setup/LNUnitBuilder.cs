@@ -26,7 +26,7 @@ public class LNUnitBuilder : IDisposable
     private readonly ILogger<LNUnitBuilder>? _logger;
     private readonly IServiceProvider? _serviceProvider;
     private bool _loopLNDReady;
-    private int _waitForBitcoinNodeStartup = 30_000; //ms timeout
+    public int WaitForBitcoinNodeStartupTimeout { get; set; } = 30_000; //ms timeout
     public Dictionary<string, LNDChannelInterceptorHandler> ChannelHandlers = new();
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
@@ -136,8 +136,9 @@ public class LNUnitBuilder : IDisposable
             bitcoinNode = listContainers.First(x => x.ID == nodeContainer.ID);
             BitcoinRpcClient = new RPCClient("bitcoin:bitcoin",
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
-            _waitForBitcoinNodeStartup = 10000;
-            BitcoinRpcClient.HttpClient.Timeout = TimeSpan.FromMilliseconds(_waitForBitcoinNodeStartup); //10s
+            WaitForBitcoinNodeStartupTimeout = 30000;
+            BitcoinRpcClient.HttpClient = new HttpClient() { Timeout = WaitForBitcoinNodeStartupTimeout };
+
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true });
             var utxos = await BitcoinRpcClient.GenerateAsync(200);
         }
@@ -838,7 +839,7 @@ public static class LNUnitBuilderExtensions
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string postgresDSN = null)
+        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null)
     {
         var cmd = new List<string>
         {

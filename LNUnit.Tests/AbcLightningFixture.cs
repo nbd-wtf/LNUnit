@@ -17,6 +17,7 @@ using ServiceStack;
 using ServiceStack.Text;
 using Assert = NUnit.Framework.Assert;
 
+namespace LNUnit.Fixtures;
 
 [TestFixture("postgres")]
 [TestFixture("boltdb")]
@@ -75,13 +76,13 @@ public class AbcLightningFixture : IDisposable
         GC.SuppressFinalize(this);
 
         // Remove containers
-        _client.RemoveContainer(DbContainerName).Wait();
         _client.RemoveContainer("miner").Wait();
         _client.RemoveContainer("alice").Wait();
         _client.RemoveContainer("bob").Wait();
         _client.RemoveContainer("carol").Wait();
 
         Builder?.Destroy();
+        Builder?.Dispose();
         _client.Dispose();
     }
 
