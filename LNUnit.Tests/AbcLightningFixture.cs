@@ -5,7 +5,6 @@ using Google.Protobuf;
 using Grpc.Core;
 using Lnrpc;
 using LNUnit.Extentions;
-using LNUnit.Fixtures;
 using LNUnit.LND;
 using LNUnit.Setup;
 using Microsoft.Extensions.Caching.Memory;
@@ -17,7 +16,7 @@ using ServiceStack;
 using ServiceStack.Text;
 using Assert = NUnit.Framework.Assert;
 
-namespace LNUnit.Fixtures;
+namespace LNUnit.Test.Fixtures;
 
 [TestFixture("postgres")]
 [TestFixture("boltdb")]

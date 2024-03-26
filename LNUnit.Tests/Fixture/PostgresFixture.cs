@@ -7,7 +7,7 @@ using Npgsql;
 using Assert = NUnit.Framework.Assert;
 using HostConfig = Docker.DotNet.Models.HostConfig;
 
-namespace LNUnit.Fixtures;
+namespace LNUnit.Test.Fixtures;
 
 /// <summary>
 ///     Used Globally to get Postgres support

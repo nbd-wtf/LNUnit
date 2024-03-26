@@ -26,7 +26,10 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
-      run: dotnet test --no-build --verbosity normal -l "console;verbosity=detailed" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --results-directory ./coverage
+      run: |
+         cdir=pwd
+         cd LNUnit.Tests
+         dotnet test -f net8.0 --filter FullyQualifiedName~LNUnit.Test --no-build --verbosity normal -l "console;verbosity=detailed" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --results-directory $cdir/coverage
     - name: Test Report
       uses: dorny/test-reporter@v1
       if: success() || failure()    # run this step even if previous step failed

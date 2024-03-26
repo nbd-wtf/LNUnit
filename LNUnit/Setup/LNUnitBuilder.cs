@@ -137,7 +137,7 @@ public class LNUnitBuilder : IDisposable
             BitcoinRpcClient = new RPCClient("bitcoin:bitcoin",
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
             WaitForBitcoinNodeStartupTimeout = 30000;
-            BitcoinRpcClient.HttpClient = new HttpClient() { Timeout = WaitForBitcoinNodeStartupTimeout };
+            BitcoinRpcClient.HttpClient = new HttpClient() { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
 
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true });
             var utxos = await BitcoinRpcClient.GenerateAsync(200);
@@ -322,6 +322,11 @@ public class LNUnitBuilder : IDisposable
                 foreach (var remoteNode in remotes) await ConnectPeers(localNode, remoteNode);
             }
 
+            while (LNDNodePool.ReadyNodes.Count < Configuration.LNDNodes.Count)
+            {
+                await Task.Delay(250);
+                if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
+            }
             //Setup Channels (this includes sending funds and waiting)
             foreach (var n in Configuration.LNDNodes) //TODO: can do multiple at once
             {
