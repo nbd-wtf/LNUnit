@@ -1,32 +1,27 @@
-using System.Collections.Immutable; 
+using System.Collections.Immutable;
 using Dasync.Collections;
-using Docker.DotNet; 
+using Docker.DotNet;
 using Google.Protobuf;
 using Grpc.Core;
 using Lnrpc;
 using LNUnit.Extentions;
+using LNUnit.Fixtures;
 using LNUnit.LND;
-using LNUnit.Setup; 
+using LNUnit.Setup;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;  
+using Microsoft.Extensions.DependencyInjection;
 using Routerrpc;
-using Serilog; 
+using Serilog;
 using ServiceStack;
 using ServiceStack.Text;
-using Assert = NUnit.Framework.Assert; 
-using LNUnit.Fixtures;
+using Assert = NUnit.Framework.Assert;
 
 
 [TestFixture("postgres")]
 [TestFixture("boltdb")]
 public class AbcLightningFixture : IDisposable
 {
-    public AbcLightningFixture(string dbType)
-    {
-        _dbType = dbType;
-    }
-    
     [SetUp]
     public async Task PerTestSetUp()
     {
@@ -37,18 +32,18 @@ public class AbcLightningFixture : IDisposable
 
     [OneTimeSetUp]
     public async Task OneTimeSetup()
-    { 
+    {
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Directory.GetCurrentDirectory()) // Set the current directory as the base path
-            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)  
-            .AddJsonFile("appsettings.Development.json", optional: false, reloadOnChange: true)  
+            .AddJsonFile("appsettings.json", false, true)
+            .AddJsonFile("appsettings.Development.json", false, true)
             .Build();
-        var services =  new ServiceCollection(); 
+        var services = new ServiceCollection();
         var loggerConfiguration = new LoggerConfiguration().Enrich.FromLogContext();
         loggerConfiguration.ReadFrom.Configuration(configuration);
         Log.Logger = loggerConfiguration.CreateLogger();
         services.AddLogging();
-        services.AddSerilog(Log.Logger, dispose: true); 
+        services.AddSerilog(Log.Logger, true);
         _serviceProvider = services.BuildServiceProvider();
         Builder = ActivatorUtilities.CreateInstance<LNUnitBuilder>(_serviceProvider);
 
@@ -58,15 +53,21 @@ public class AbcLightningFixture : IDisposable
             PostgresFixture.AddDb("bob");
             PostgresFixture.AddDb("carol");
         }
+
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
         await SetupNetwork("custom_lnd", "latest", "/home/lnd/.lnd");
     }
-    
+
+    public AbcLightningFixture(string dbType)
+    {
+        _dbType = dbType;
+    }
+
     public string DbContainerName { get; set; } = "postgres";
     private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
     private string _containerId;
     private string _ip;
-    
+
     private ServiceProvider _serviceProvider;
 
     public void Dispose()
@@ -99,38 +100,41 @@ public class AbcLightningFixture : IDisposable
 
         if (pullImage) await _client.PullImageAndWaitForCompleted(image, tag);
 
-        
+
         Builder.AddPolarLNDNode("alice",
-        [
-            new LNUnitNetworkDefinition.Channel
-            {
-                ChannelSize = 10_000_000, //10MSat
-                RemoteName = "bob"
-            }
-        ], imageName: image, tagName: tag, pullImage: false, postgresDSN:_dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
+            [
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemoteName = "bob"
+                }
+            ], imageName: image, tagName: tag, pullImage: false,
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarLNDNode("bob",
-        [
-            new LNUnitNetworkDefinition.Channel
-            {
-                ChannelSize = 10_000_000, //10MSat
-                RemotePushOnStart = 1_000_000, // 1MSat
-                RemoteName = "alice"
-            }
-        ], imageName: image, tagName: tag, pullImage: false, postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
+            [
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemotePushOnStart = 1_000_000, // 1MSat
+                    RemoteName = "alice"
+                }
+            ], imageName: image, tagName: tag, pullImage: false,
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         Builder.AddPolarLNDNode("carol",
-        [
-            new LNUnitNetworkDefinition.Channel
-            {
-                ChannelSize = 10_000_000, //10MSat
-                RemotePushOnStart = 1_000_000, // 1MSat
-                RemoteName = "bob"
-            }
-        ], imageName: image, tagName: tag, pullImage: false , postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
+            [
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemotePushOnStart = 1_000_000, // 1MSat
+                    RemoteName = "bob"
+                }
+            ], imageName: image, tagName: tag, pullImage: false,
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
 
         await Builder.Build(lndRoot: lndRoot);
-        
+
         WaitNodesReady();
         await WaitGraphReady();
     }
@@ -161,8 +165,6 @@ public class AbcLightningFixture : IDisposable
         }
     }
 
-   
-   
 
     public async Task<bool> IsRunning()
     {
@@ -178,17 +180,10 @@ public class AbcLightningFixture : IDisposable
 
         return false;
     }
-    
-    
-    
-    
+
+
     ///////
-    ///
-    ///
     /// ///
-    
-    
-    
     [Test]
     [Category("Payment")]
     [NonParallelizable]
@@ -243,7 +238,7 @@ public class AbcLightningFixture : IDisposable
         stats.PrintDump();
     }
 
-    
+
     [Test]
     [Category("Version")]
     [NonParallelizable]
@@ -540,7 +535,7 @@ public class AbcLightningFixture : IDisposable
         invoice.PrintDump();
         //Apply HTLC hold to prevent payment from settling
         await Builder.DelayAllHTLCsOnAlias("bob", 600_000); //600s
-      
+
         var paymentTask = Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
@@ -561,7 +556,7 @@ public class AbcLightningFixture : IDisposable
         payment.PrintDump();
         paymentTask.Dispose();
         Assert.That(payment != null && payment.Status == Payment.Types.PaymentStatus.Failed);
-        Assert.That(payment != null && payment.FailureReason == PaymentFailureReason.FailureReasonNoRoute); 
+        Assert.That(payment != null && payment.FailureReason == PaymentFailureReason.FailureReasonNoRoute);
     }
 
 
@@ -679,7 +674,7 @@ public class AbcLightningFixture : IDisposable
             IncludeIncomplete = true // this included failures per docs
         });
         var finalized = new List<Payment.Types.PaymentStatus>
-            {Payment.Types.PaymentStatus.Failed};
+            { Payment.Types.PaymentStatus.Failed };
         await foreach (var p in payments.Payments.Where(x => finalized.Contains(x.Status) && x.Htlcs.Any()))
         {
             var destinationNode = p.Htlcs.Last().Route.Hops.Last().PubKey;
@@ -722,6 +717,7 @@ public class AbcLightningFixture : IDisposable
             }
         }
     }
+
     private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
     private readonly string _dbType;
 
@@ -747,7 +743,7 @@ public class AbcLightningFixture : IDisposable
 
         return alias;
     }
-    
+
     [Test]
     [Category("Payment")]
     [Category("Invoice")]

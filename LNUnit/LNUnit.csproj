@@ -7,17 +7,17 @@
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
         <Version>1.5.4</Version>
         <IsPackable>true</IsPackable>
-        <PackageId>LNUnit</PackageId> 
+        <PackageId>LNUnit</PackageId>
         <PackageDescription>Lightning Network Unit Testing Framework</PackageDescription>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="NBitcoin" Version="7.0.31"/>
-        <PackageReference Include="ServiceStack" Version="8.0.0" />
-        <PackageReference Include="SharpCompress" Version="0.34.2" />
+        <PackageReference Include="ServiceStack" Version="8.0.0"/>
+        <PackageReference Include="SharpCompress" Version="0.34.2"/>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/> 
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
     </ItemGroup>
 
     <ItemGroup>

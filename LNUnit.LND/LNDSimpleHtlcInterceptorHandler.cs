@@ -18,7 +18,8 @@ public class LNDSimpleHtlcInterceptorHandler : IDisposable
         Func<ForwardHtlcInterceptRequest, Task<ForwardHtlcInterceptResponse>> interceptLogic)
     {
         Node = connection;
-        _task = Task.Factory.StartNew(AttachInterceptor, _cancellationTokenSource.Token, TaskCreationOptions.LongRunning, TaskScheduler.Current);
+        _task = Task.Factory.StartNew(AttachInterceptor, _cancellationTokenSource.Token,
+            TaskCreationOptions.LongRunning, TaskScheduler.Current);
         OnIntercept = interceptLogic;
         while (!Running)
             Task.Delay(100).Wait();

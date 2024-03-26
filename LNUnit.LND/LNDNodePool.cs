@@ -271,7 +271,7 @@ public class LNDNodePool : IDisposable
             {
                 Value = valueInSataoshis,
                 Memo = "InvoicePayRebalance",
-                Expiry = 60,  //1 minute
+                Expiry = 60 //1 minute
             });
             _logger?.LogDebug("InvoicePayRebalance: {PaymentRequest} for {Value} sats from {Source}",
                 invoice.PaymentRequest, valueInSataoshis, src.LocalAlias);

@@ -43,7 +43,7 @@ public static class DockerHelper
             await Task.Delay(1);
     }
 
-    public static async Task RemoveContainer(this DockerClient client,string name, bool removeLinks = false)
+    public static async Task RemoveContainer(this DockerClient client, string name, bool removeLinks = false)
     {
         try
         {
@@ -65,6 +65,7 @@ public static class DockerHelper
             // ignored
         }
     }
+
     private static string GetRandomHexString(int size = 8)
     {
         var b = new byte[size];

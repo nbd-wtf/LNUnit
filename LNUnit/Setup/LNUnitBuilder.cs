@@ -26,10 +26,10 @@ public class LNUnitBuilder : IDisposable
     private readonly ILogger<LNUnitBuilder>? _logger;
     private readonly IServiceProvider? _serviceProvider;
     private bool _loopLNDReady;
+    private int _waitForBitcoinNodeStartup = 30_000; //ms timeout
     public Dictionary<string, LNDChannelInterceptorHandler> ChannelHandlers = new();
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
-    private int _waitForBitcoinNodeStartup = 30_000; //ms timeout
 
     public LNUnitBuilder(LNUnitNetworkDefinition c = null, ILogger<LNUnitBuilder>? logger = null,
         IServiceProvider serviceProvider = null)
@@ -271,7 +271,10 @@ public class LNUnitBuilder : IDisposable
                 ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
             }
 
-            var basePath = !n.Image.Contains("lightning-terminal") ? lndRoot : "/root/lnd/.lnd"; // "/home/lnd/.lnd" : "/root/lnd/.lnd";
+            var basePath =
+                !n.Image.Contains("lightning-terminal")
+                    ? lndRoot
+                    : "/root/lnd/.lnd"; // "/home/lnd/.lnd" : "/root/lnd/.lnd";
             if (n.Image.Contains("lightning-terminal")) await Task.Delay(2000);
             var txt = await GetStringFromFS(n.DockerContainerId, $"{basePath}/tls.cert");
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
@@ -790,7 +793,8 @@ public static class LNUnitBuilderExtensions
     }
 
 
-    public static LNUnitBuilder AddBitcoinCoreNode(this LNUnitBuilder b, string name = "miner", string image = "polarlightning/bitcoind", string tag = "26.0", bool txIndex = true, bool pullImage = true)
+    public static LNUnitBuilder AddBitcoinCoreNode(this LNUnitBuilder b, string name = "miner",
+        string image = "polarlightning/bitcoind", string tag = "26.0", bool txIndex = true, bool pullImage = true)
     {
         return b.AddBitcoinCoreNode(new LNUnitNetworkDefinition.BitcoinNode
         {
@@ -867,9 +871,10 @@ public static class LNUnitBuilderExtensions
         {
             cmd.Add("--db.backend=postgres");
             cmd.Add($"--db.postgres.dsn={postgresDSN}");
-            cmd.Add($"--db.postgres.timeout=300s");
-            cmd.Add($"--db.postgres.maxconnections=16");
+            cmd.Add("--db.postgres.timeout=300s");
+            cmd.Add("--db.postgres.maxconnections=16");
         }
+
         if (gcInvoiceOnStartup) cmd.Add("--gc-canceled-invoices-on-startup");
         if (gcInvoiceOnFly) cmd.Add("--gc-canceled-invoices-on-the-fly");
 
@@ -883,7 +888,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -939,7 +944,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -983,7 +988,7 @@ public static class LNUnitBuilderExtensions
         };
 
 
-        var node = new LNUnitNetworkDefinition.CLNNode()
+        var node = new LNUnitNetworkDefinition.CLNNode
         {
             Image = imageName,
             Tag = tagName,
@@ -991,7 +996,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -1063,7 +1068,7 @@ public static class LNUnitBuilderExtensions
             BitcoinBackendName = "miner",
             EnvironmentVariables = new Dictionary<string, string>
             {
-                {"FLAG", "true"}
+                { "FLAG", "true" }
             },
             Cmd = cmd,
             PullImage = pullImage,
@@ -1124,7 +1129,7 @@ $ docker run -d \
                 },
                 ExposedPorts = new Dictionary<string, EmptyStruct>
                 {
-                    {"11009", new EmptyStruct()}
+                    { "11009", new EmptyStruct() }
                 },
 
                 Binds = new List<string> { $"{Path.GetFullPath("./loopserver-test/")}:/home/lnd/.lnd/" },

@@ -1,39 +1,30 @@
-using System.Collections.Immutable;
 using System.Net;
 using System.Net.Sockets;
-using Dasync.Collections;
 using Docker.DotNet;
 using Docker.DotNet.Models;
-using Lnrpc;
-using LNUnit.Extentions;
-using LNUnit.LND;
 using LNUnit.Setup;
-using LNUnit.Tests;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Logging;
 using Npgsql;
-using Routerrpc;
-using Serilog;
-using Serilog.Extensions.Logging;
-using ServiceStack.Text;
 using Assert = NUnit.Framework.Assert;
 using HostConfig = Docker.DotNet.Models.HostConfig;
 
 namespace LNUnit.Fixtures;
 
-
 /// <summary>
-/// Used Globally to get Postgres support
+///     Used Globally to get Postgres support
 /// </summary>
 public static class PostgresFixture
 {
     public static Dictionary<string, string> LNDConnectionStrings = new();
-    public static string DbConnectionStringDotNet { get;internal set; } = string.Empty;
+    public static string DbConnectionStringDotNet { get; internal set; } = string.Empty;
     public static string DbContainerName { get; internal set; } = "postgres";
 
-    public static async Task<bool> IsReady() => await Instance?.IsRunning();
-
     internal static PostgresInstanceFixture? Instance { get; set; }
+
+    public static async Task<bool> IsReady()
+    {
+        return await Instance?.IsRunning();
+    }
+
     public static void AddDb(string dbName)
     {
         Instance?.AddDb(dbName);
@@ -44,11 +35,11 @@ public static class PostgresFixture
 public class PostgresInstanceFixture
 {
     private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
+
+    public readonly Dictionary<string, string> LNDConnectionStrings = PostgresFixture.LNDConnectionStrings;
     private string _containerId;
     private string _ip;
 
-    public readonly Dictionary<string, string> LNDConnectionStrings = PostgresFixture.LNDConnectionStrings;
-    
     public string DbConnectionStringDotNet { get; private set; }
     public string DbContainerName { get; set; } = "postgres";
 
@@ -86,7 +77,7 @@ public class PostgresInstanceFixture
     }
 
     private async Task StartPostgres(
-        string image = "postgres", 
+        string image = "postgres",
         string tag = "16.2-alpine",
         string password = "superuser",
         string username = "superuser")
@@ -106,7 +97,7 @@ public class PostgresInstanceFixture
             [
                 $"POSTGRES_PASSWORD={username}",
                 $"POSTGRES_USER={password}",
-                $"POSTGRES_DB=postgres"
+                "POSTGRES_DB=postgres"
             ]
         });
         Assert.NotNull(nodeContainer);
@@ -150,7 +141,7 @@ public class PostgresInstanceFixture
             }
     }
 
-    
+
     public async Task<bool> IsRunning()
     {
         try
