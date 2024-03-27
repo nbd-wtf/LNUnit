@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <Version>1.6.0</Version>
+        <Version>1.6.1</Version>
         <IsPackable>true</IsPackable>
         <PackageId>LNUnit</PackageId>
         <PackageDescription>Lightning Network Unit Testing Framework</PackageDescription>
