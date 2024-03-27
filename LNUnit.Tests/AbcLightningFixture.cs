@@ -118,6 +118,21 @@ public class AbcLightningFixture : IDisposable
                 {
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
+                },
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemoteName = "bob"
+                },
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemoteName = "bob"
+                },
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemoteName = "bob"
                 }
             ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
@@ -135,6 +150,24 @@ public class AbcLightningFixture : IDisposable
 
         Builder.AddPolarLNDNode("carol",
             [
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemotePushOnStart = 1_000_000, // 1MSat
+                    RemoteName = "bob"
+                },
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemotePushOnStart = 1_000_000, // 1MSat
+                    RemoteName = "bob"
+                },
+                new LNUnitNetworkDefinition.Channel
+                {
+                    ChannelSize = 10_000_000, //10MSat
+                    RemotePushOnStart = 1_000_000, // 1MSat
+                    RemoteName = "bob"
+                },
                 new LNUnitNetworkDefinition.Channel
                 {
                     ChannelSize = 10_000_000, //10MSat
@@ -440,6 +473,77 @@ public class AbcLightningFixture : IDisposable
             new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
 
         Assert.That(payment.Status, Is.EqualTo(Payment.Types.PaymentStatus.Succeeded));
+    }
+
+
+    /// <summary>
+    /// Keysend from Alice and Carol to Bob, see how many can clear in 10s.
+    /// </summary>
+    /// <param name="threads"></param>
+    [Test]
+    [Category("Payment")]
+    [NonParallelizable]
+    [Timeout(60000)]
+    [TestCase(2)]
+    [TestCase(4)]
+    [TestCase(8)]
+    [TestCase(16)]
+    [TestCase(32)]
+    public async Task Keysend_To_Bob_PaymentsPerSecondMax_Threaded(int threads)
+    {
+        Builder.CancelAllInterceptors();
+        var aliceSettings = await Builder.GetLNDSettingsFromContainer("alice", _lndRoot);
+        var bobSettings = await Builder.GetLNDSettingsFromContainer("bob", _lndRoot);
+        var carolSettings = await Builder.GetLNDSettingsFromContainer("carol", _lndRoot);
+        var alice = new LNDNodeConnection(aliceSettings);
+        var bob = new LNDNodeConnection(bobSettings);
+        var carol = new LNDNodeConnection(carolSettings);
+
+        await Task.Delay(1000); //TODO: why? we are not checking channels are up
+
+        var sw = Stopwatch.StartNew();
+        var success_count = 0;
+        var fail_count = 0;
+        var cts = new CancellationTokenSource();
+
+        while (sw.ElapsedMilliseconds <= 10_000)
+        {
+            Task.WaitAll(
+             Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
+            {
+                var payment = await alice.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
+                    new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
+                if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                {
+                    Interlocked.Increment(ref success_count);
+                }
+                else
+                {
+                    Interlocked.Increment(ref fail_count);
+                }
+            }),
+             Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
+            {
+                var payment = await carol.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
+                    new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
+                if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                {
+                    Interlocked.Increment(ref success_count);
+                }
+                else
+                {
+                    Interlocked.Increment(ref fail_count);
+                }
+                Interlocked.Increment(ref success_count);
+            }));
+        }
+        sw.Stop();
+        var attempted_pps = (fail_count + success_count) / (sw.ElapsedMilliseconds / 1000.0);
+        $"Attempted Payments: {fail_count + success_count}".Print();
+        $"Successful: {success_count}".Print();
+        $"Failed    : {fail_count}".Print();
+        var successful_pps = success_count / (sw.ElapsedMilliseconds / 1000.0);
+        $"Successful Payments per second: {successful_pps}".Print();
     }
 
     [Test]
