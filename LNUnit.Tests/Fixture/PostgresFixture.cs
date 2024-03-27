@@ -53,6 +53,7 @@ public class PostgresInstanceFixture
     [OneTimeTearDown]
     public async Task RunAfterAnyTests()
     {
+        await _client.RemoveContainer(DbContainerName);
         _client.Dispose();
     }
 

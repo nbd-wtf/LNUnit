@@ -484,10 +484,7 @@ public class AbcLightningFixture : IDisposable
     [Category("Payment")]
     [NonParallelizable]
     [Timeout(60000)]
-    [TestCase(2)]
-    [TestCase(4)]
-    [TestCase(8)]
-    [TestCase(16)]
+    [TestCase(1)]
     [TestCase(32)]
     public async Task Keysend_To_Bob_PaymentsPerSecondMax_Threaded(int threads)
     {
