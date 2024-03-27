@@ -871,7 +871,7 @@ public static class LNUnitBuilderExtensions
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null)
+        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null, string lndRoot = "/home/lnd/.lnd")
     {
         var cmd = new List<string>
         {
@@ -933,7 +933,7 @@ public static class LNUnitBuilderExtensions
             if (Directory.Exists(dir)) RecursiveDelete(new DirectoryInfo(dir));
             Directory.CreateDirectory($"/tmp/lnunit/{aliasHostname}");
 
-            node.Binds = new List<string> { $"{Path.GetFullPath(dir)}:/home/lnd/.lnd/" };
+            node.Binds = new List<string> { $"{Path.GetFullPath(dir)}:{lndRoot}/" };
         }
 
         return b.AddLNDNode(node);
