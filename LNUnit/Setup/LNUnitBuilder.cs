@@ -585,7 +585,7 @@ public class LNUnitBuilder : IDisposable
     }
 
     public async Task RestartByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false,
-        bool resetChannels = true, string lndRoot = "/hone/lnd/.lnd")
+        bool resetChannels = true, string lndRoot = "/home/lnd/.lnd")
     {
         await _dockerClient.Containers.RestartContainerAsync(alias, new ContainerRestartParameters
         {
