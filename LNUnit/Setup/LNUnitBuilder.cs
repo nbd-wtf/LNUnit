@@ -11,6 +11,7 @@ using Lnrpc;
 using LNUnit.LND;
 using NBitcoin;
 using NBitcoin.RPC;
+using Org.BouncyCastle.Crypto.Parameters;
 using Routerrpc;
 using ServiceStack;
 using SharpCompress.Readers;
@@ -525,6 +526,22 @@ public class LNUnitBuilder : IDisposable
         }
     }
 
+    public async Task WaitGraphReady(string fromAlias, int expectedNodeCount)
+    {
+        var graphReady = false;
+        while (!graphReady)
+        {
+            var graph = await GetGraphFromAlias(fromAlias);
+            if (graph.Nodes.Count < expectedNodeCount)
+            {
+                await Task.Delay(250); //let the graph sync 
+            }
+            else
+            {
+                graphReady = true;
+            }
+        }
+    }
     private static string GetStringFromTar(GetArchiveFromContainerResponse tlsCertResponse)
     {
         using (var stream = tlsCertResponse.Stream)
@@ -592,11 +609,18 @@ public class LNUnitBuilder : IDisposable
                     //Wait until we are synced to the chain so we know we have funds secured to send
                     var info = new GetInfoResponse();
                     while (!info.SyncedToChain && !info.SyncedToGraph)
+                    {
                         info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
+                        await Task.Delay(250);
+                    }
                     info = new GetInfoResponse();
                     while (!info.SyncedToChain && !info.SyncedToGraph)
+                    {
                         info = await remoteNode.LightningClient.GetInfoAsync(new GetInfoRequest());
+                        await Task.Delay(250);
+                    }
 
+                    await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
                     if (resetChannels)
                     {
                         var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest

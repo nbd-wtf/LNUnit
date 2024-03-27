@@ -13,6 +13,7 @@ using Peersrpc;
 using Routerrpc;
 using ServiceStack;
 using Signrpc;
+using Walletrpc;
 
 namespace LNUnit.LND;
 
@@ -46,6 +47,7 @@ public class LNDNodeConnection : IDisposable
     public Dev.DevClient DevClient { get; internal set; }
     public Invoices.InvoicesClient InvoiceClient { get; internal set; }
     public Peers.PeersClient PeersClient { get; internal set; }
+    public WalletKit.WalletKitClient WalletKitClient { get; internal set; }
 
 
     public string LocalNodePubKey { get; internal set; }
@@ -90,6 +92,7 @@ public class LNDNodeConnection : IDisposable
         DevClient = new Dev.DevClient(gRPCChannel);
         InvoiceClient = new Invoices.InvoicesClient(gRPCChannel);
         PeersClient = new Peers.PeersClient(gRPCChannel);
+        WalletKitClient = new WalletKit.WalletKitClient(gRPCChannel);
         _logger?.LogDebug("Setup gRPC with {Host}", host);
 
         var nodeInfo = LightningClient.GetInfo(new GetInfoRequest());
