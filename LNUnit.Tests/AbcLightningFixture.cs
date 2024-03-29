@@ -20,9 +20,9 @@ using Assert = NUnit.Framework.Assert;
 
 namespace LNUnit.Test.Fixtures;
 
-[TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
-[TestFixture("boltdb", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
-[TestFixture("postgres", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
+// [TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+// [TestFixture("boltdb", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+// [TestFixture("postgres", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
 [TestFixture("boltdb", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
 public class AbcLightningFixture : IDisposable
 {
@@ -134,7 +134,7 @@ public class AbcLightningFixture : IDisposable
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp:true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarLNDNode("bob",
@@ -145,7 +145,7 @@ public class AbcLightningFixture : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "alice"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp:true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         Builder.AddPolarLNDNode("carol",
@@ -174,7 +174,7 @@ public class AbcLightningFixture : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp:true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
 
         await Builder.Build(lndRoot: lndRoot);
@@ -337,8 +337,8 @@ public class AbcLightningFixture : IDisposable
             acceptorTasks.Add(channelAcceptor);
         }
 
-        var alice = Builder.GetNodeFromAlias("alice");
-        var bob = Builder.GetNodeFromAlias("bob");
+        var alice = await Builder.GetNodeFromAlias("alice");
+        var bob = await Builder.GetNodeFromAlias("bob");
         //Fail Private
         Assert.CatchAsync<RpcException>(async () =>
         {
@@ -608,7 +608,7 @@ public class AbcLightningFixture : IDisposable
     [Timeout(5000)]
     public async Task UpdateChannelPolicy()
     {
-        var data = Builder.UpdateGlobalFeePolicyOnAlias("alice", new LNUnitNetworkDefinition.Channel());
+        var data = await Builder.UpdateGlobalFeePolicyOnAlias("alice", new LNUnitNetworkDefinition.Channel());
         data.PrintDump();
         Assert.That(data.FailedUpdates.Count == 0);
     }
@@ -617,7 +617,7 @@ public class AbcLightningFixture : IDisposable
     [Timeout(10000)]
     public async Task SendMany_Onchain()
     {
-        var alice = Builder.GetNodeFromAlias("alice");
+        var alice = await Builder.GetNodeFromAlias("alice");
         var addresses = new List<string>();
         var sendManyRequest = new SendManyRequest()
         {

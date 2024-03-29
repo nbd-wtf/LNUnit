@@ -155,7 +155,6 @@ public class LNDNodeConnection : IDisposable
         catch (Exception e)
         {
         }
-
         return WalletState.NonExisting;
     }
 
