@@ -134,7 +134,7 @@ public class AbcLightningFixture : IDisposable
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp:true,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarLNDNode("bob",
@@ -145,7 +145,7 @@ public class AbcLightningFixture : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "alice"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp:true,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         Builder.AddPolarLNDNode("carol",
@@ -174,7 +174,7 @@ public class AbcLightningFixture : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp:true,
+            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
 
         await Builder.Build(lndRoot: lndRoot);
