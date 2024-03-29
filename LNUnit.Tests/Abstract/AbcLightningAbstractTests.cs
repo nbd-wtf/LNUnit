@@ -9,6 +9,7 @@ using Lnrpc;
 using LNUnit.Extentions;
 using LNUnit.LND;
 using LNUnit.Setup;
+using LNUnit.Tests.Fixture;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,14 +19,25 @@ using ServiceStack;
 using ServiceStack.Text;
 using Assert = NUnit.Framework.Assert;
 
-namespace LNUnit.Test.Fixtures;
+namespace LNUnit.Tests.Abstract;
 
-// [TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
-// [TestFixture("boltdb", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
-// [TestFixture("postgres", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
-[TestFixture("boltdb", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
-public class AbcLightningFixture : IDisposable
+
+public abstract class AbcLightningAbstractTests : IDisposable
 {
+    public AbcLightningAbstractTests(string dbType,
+        string lndImage = "custom_lnd",
+        string tag = "latest",
+        string lndRoot = "/root/.lnd",
+        bool pullImage = false
+    )
+    {
+        _dbType = dbType;
+        _lndImage = lndImage;
+        _tag = tag;
+        _lndRoot = lndRoot;
+        _pullImage = pullImage;
+    }
+
     [SetUp]
     public async Task PerTestSetUp()
     {
@@ -62,19 +74,7 @@ public class AbcLightningFixture : IDisposable
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
-    public AbcLightningFixture(string dbType,
-        string lndImage = "custom_lnd",
-        string tag = "latest",
-        string lndRoot = "/root/.lnd",
-        bool pullImage = false
-    )
-    {
-        _dbType = dbType;
-        _lndImage = lndImage;
-        _tag = tag;
-        _lndRoot = lndRoot;
-        _pullImage = pullImage;
-    }
+
 
     public string DbContainerName { get; set; } = "postgres";
     private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
@@ -900,11 +900,11 @@ public class AbcLightningFixture : IDisposable
     }
 
     private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
-    private readonly string _dbType;
-    private readonly string _lndImage;
-    private readonly string _tag;
-    private readonly string _lndRoot;
-    private readonly bool _pullImage;
+    protected readonly string _dbType;
+    protected readonly string _lndImage;
+    protected readonly string _tag;
+    protected readonly string _lndRoot;
+    protected readonly bool _pullImage;
 
     private async Task<string> ToAlias(LNDNodeConnection c, string remotePubkey)
     {

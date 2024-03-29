@@ -7,7 +7,7 @@ using Npgsql;
 using Assert = NUnit.Framework.Assert;
 using HostConfig = Docker.DotNet.Models.HostConfig;
 
-namespace LNUnit.Test.Fixtures;
+namespace LNUnit.Tests.Fixture;
 
 /// <summary>
 ///     Used Globally to get Postgres support
@@ -109,7 +109,7 @@ public class PostgresInstanceFixture
             if (db != null)
             {
                 _ip = db.NetworkSettings.Networks.First().Value.IPAddress;
-                DbConnectionStringDotNet = $"Host={_ip};Database=postgres;Username=superuser;Password=superuser";
+                DbConnectionStringDotNet = $"Host={_ip};Database=postgres;Username=superuser;Password=superuser;Include Error Detail=true;";
                 ipAddressReady = true;
             }
             else

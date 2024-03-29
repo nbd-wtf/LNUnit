@@ -2,7 +2,7 @@ using Docker.DotNet;
 using Docker.DotNet.Models;
 using LNUnit.Setup;
 
-namespace LNUnit.Tests;
+namespace LNUnit.Tests.Abstract;
 
 public class DockerTest
 {
