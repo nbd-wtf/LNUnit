@@ -635,8 +635,9 @@ public class AbcLightningFixture : IDisposable
 
         alice.LightningClient.SendMany(sendManyRequest);
 
-        Builder.NewBlock(10); //fast forward in time
+        await Builder.NewBlock(10); //fast forward in time
 
+        await Builder.WaitUntilSyncedToChain("alice");
         //verify last address got funds
         var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest() { });
         var confirmedAddresses = new List<string>();

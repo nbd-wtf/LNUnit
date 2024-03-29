@@ -406,7 +406,7 @@ public class LNUnitBuilder : IDisposable
         IsBuilt = true;
     }
 
-    private static async Task WaitUntilSyncedToChain(LNDNodeConnection node)
+    public static async Task WaitUntilSyncedToChain(LNDNodeConnection node)
     {
         var info = new GetInfoResponse();
         while (!info.SyncedToChain)
@@ -416,6 +416,10 @@ public class LNUnitBuilder : IDisposable
         }
     }
 
+    public async Task WaitUntilSyncedToChain(string alias)
+    {
+        await WaitUntilSyncedToChain(await GetNodeFromAlias(alias));
+    }
 
     public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
     {
@@ -642,7 +646,8 @@ public class LNUnitBuilder : IDisposable
                         c.ChannelPoint = channelPoint;
                         //Move things along so it is confirmed
                         await BitcoinRpcClient.GenerateAsync(10);
-
+                        await this.WaitUntilSyncedToChain(alias);
+                        await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
                         //Set fees & htlcs, TLD
                         var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
                             new PolicyUpdateRequest
