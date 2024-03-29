@@ -363,8 +363,7 @@ public class LNUnitBuilder : IDisposable
                     ConnectPeers(node, remoteNode);
 
                     //Wait until we are synced to the chain so we know we have funds secured to send
-                    var info = new GetInfoResponse();
-                    while (!info.SyncedToChain) info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
+                    await WaitUntilSyncedToChain(node);
 
                     var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
                     {
@@ -376,7 +375,7 @@ public class LNUnitBuilder : IDisposable
                     c.ChannelPoint = channelPoint;
                     //Move things along so it is confirmed
                     await BitcoinRpcClient.GenerateAsync(10);
-
+                    await WaitUntilSyncedToChain(node);
                     var setFeesWorked = false;
                     while (!setFeesWorked)
                         try
@@ -407,6 +406,20 @@ public class LNUnitBuilder : IDisposable
         IsBuilt = true;
     }
 
+    public static async Task WaitUntilSyncedToChain(LNDNodeConnection node)
+    {
+        var info = new GetInfoResponse();
+        while (!info.SyncedToChain)
+        {
+            await Task.Delay(100);
+            info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
+        }
+    }
+
+    public async Task WaitUntilSyncedToChain(string alias)
+    {
+        await WaitUntilSyncedToChain(await GetNodeFromAlias(alias));
+    }
 
     public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
     {
@@ -577,7 +590,7 @@ public class LNUnitBuilder : IDisposable
 
     public async Task<bool> ShutdownByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false)
     {
-        if (isLND) LNDNodePool?.RemoveNode(GetNodeFromAlias(alias));
+        if (isLND) LNDNodePool?.RemoveNode(await GetNodeFromAlias(alias));
         return await _dockerClient.Containers.StopContainerAsync(alias, new ContainerStopParameters
         {
             WaitBeforeKillSeconds = waitBeforeKillSeconds
@@ -585,7 +598,7 @@ public class LNUnitBuilder : IDisposable
     }
 
     public async Task RestartByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false,
-        bool resetChannels = true, string lndRoot = "/hone/lnd/.lnd")
+        bool resetChannels = true, string lndRoot = "/home/lnd/.lnd")
     {
         await _dockerClient.Containers.RestartContainerAsync(alias, new ContainerRestartParameters
         {
@@ -633,7 +646,8 @@ public class LNUnitBuilder : IDisposable
                         c.ChannelPoint = channelPoint;
                         //Move things along so it is confirmed
                         await BitcoinRpcClient.GenerateAsync(10);
-
+                        await this.WaitUntilSyncedToChain(alias);
+                        await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
                         //Set fees & htlcs, TLD
                         var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
                             new PolicyUpdateRequest
@@ -664,7 +678,7 @@ public class LNUnitBuilder : IDisposable
     public async Task<List<AddInvoiceResponse>> GeneratePaymentsRequestFromAlias(string alias, int count,
         Invoice invoice)
     {
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         var response = new ConcurrentStack<AddInvoiceResponse>();
         await Enumerable.Range(0, count).ParallelForEachAsync(async x =>
         {
@@ -676,14 +690,20 @@ public class LNUnitBuilder : IDisposable
 
     public async Task<Invoice?> LookupInvoice(string alias, ByteString rHash)
     {
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         var response = await node.LightningClient.LookupInvoiceAsync(new PaymentHash { RHash = rHash });
         return response;
     }
 
-    public LNDNodeConnection GetNodeFromAlias(string alias)
+    public async Task<LNDNodeConnection> GetNodeFromAlias(string alias)
     {
-        return LNDNodePool.ReadyNodes.First(x => x.LocalAlias == alias);
+        while (true)
+        {
+            var node = LNDNodePool.ReadyNodes.FirstOrDefault(x => x.LocalAlias == alias);
+            if (node != null)
+                return node;
+            await Task.Delay(250);
+        }
     }
 
     public async Task<LNDNodeConnection> WaitUntilAliasIsServerReady(string alias)
@@ -701,19 +721,19 @@ public class LNUnitBuilder : IDisposable
 
     public async Task<ChannelGraph> GetGraphFromAlias(string alias)
     {
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         return await node.LightningClient.DescribeGraphAsync(new ChannelGraphRequest());
     }
 
     public async Task<ListChannelsResponse> GetChannelsFromAlias(string alias)
     {
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         return await node.LightningClient.ListChannelsAsync(new ListChannelsRequest());
     }
 
     public async Task<Payment?> MakeLightningPaymentFromAlias(string alias, SendPaymentRequest request)
     {
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         request.NoInflightUpdates = true;
         var streamingCallResponse = node.RouterClient.SendPaymentV2(request);
         Payment? paymentResponse = null;
@@ -725,7 +745,7 @@ public class LNUnitBuilder : IDisposable
     public async Task<bool> IsInterceptorActiveForAlias(string alias)
     {
         if (!InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor doesn't exist");
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         return InterceptorHandlers[alias].Running;
     }
 
@@ -733,14 +753,14 @@ public class LNUnitBuilder : IDisposable
     public async Task<LNDSimpleHtlcInterceptorHandler> GetInterceptor(string alias)
     {
         if (!InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor doesn't exist");
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         return InterceptorHandlers[alias];
     }
 
     public async Task DelayAllHTLCsOnAlias(string alias, int delayMilliseconds)
     {
         if (InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor already attached");
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         var nodeClone = node.Clone();
         InterceptorHandlers.Add(alias, new LNDSimpleHtlcInterceptorHandler(nodeClone, async x =>
         {
@@ -754,18 +774,18 @@ public class LNUnitBuilder : IDisposable
         }));
     }
 
-    public PolicyUpdateResponse UpdateChannelPolicyOnAlias(string alias, PolicyUpdateRequest req)
+    public async Task<PolicyUpdateResponse> UpdateChannelPolicyOnAlias(string alias, PolicyUpdateRequest req)
     {
-        var node = GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias);
         var policyUpdateResponse = node.LightningClient.UpdateChannelPolicy(
             req);
         return policyUpdateResponse;
     }
 
-    public PolicyUpdateResponse UpdateGlobalFeePolicyOnAlias(string alias,
+    public async Task<PolicyUpdateResponse> UpdateGlobalFeePolicyOnAlias(string alias,
         LNUnitNetworkDefinition.Channel c)
     {
-        return UpdateChannelPolicyOnAlias(alias, new PolicyUpdateRequest
+        return await UpdateChannelPolicyOnAlias(alias, new PolicyUpdateRequest
         {
             Global = true,
             BaseFeeMsat = c.BaseFeeMsat.GetValueOrDefault(),
@@ -871,7 +891,7 @@ public static class LNUnitBuilderExtensions
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null)
+        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null, string lndRoot = "/home/lnd/.lnd")
     {
         var cmd = new List<string>
         {
@@ -933,7 +953,7 @@ public static class LNUnitBuilderExtensions
             if (Directory.Exists(dir)) RecursiveDelete(new DirectoryInfo(dir));
             Directory.CreateDirectory($"/tmp/lnunit/{aliasHostname}");
 
-            node.Binds = new List<string> { $"{Path.GetFullPath(dir)}:/home/lnd/.lnd/" };
+            node.Binds = new List<string> { $"{Path.GetFullPath(dir)}:{lndRoot}/" };
         }
 
         return b.AddLNDNode(node);
