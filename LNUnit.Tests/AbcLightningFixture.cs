@@ -639,7 +639,7 @@ public class AbcLightningFixture : IDisposable
 
         await Builder.WaitUntilSyncedToChain("alice");
         //verify last address got funds
-        var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest() { });
+        var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest() { MinConfs = 1, MaxConfs = 20 });
         var confirmedAddresses = new List<string>();
         foreach (var u in unspend.Utxos)
         {
@@ -650,7 +650,7 @@ public class AbcLightningFixture : IDisposable
                 confirmedAddresses.Add(exists);
             }
         }
-        Assert.That(addresses.Count, Is.EqualTo(confirmedAddresses.Count), "Confirmed deposits doesn't match request.");
+        Assert.That(confirmedAddresses.Count, Is.EqualTo(addresses.Count), "Confirmed deposits doesn't match request.");
     }
 
     [Test]
