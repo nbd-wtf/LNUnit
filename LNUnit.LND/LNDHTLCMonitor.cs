@@ -16,7 +16,7 @@ public class LNDHTLCMonitor
         _task = Task.Factory.StartNew(SubscribeHtlcEventStream, _cancellationTokenSource.Token);
         OnHtlcEvent = onHtlcEvent;
         while (!Running)
-            Task.Delay(100).Wait();
+            Task.Delay(100).GetAwaiter().GetResult();
     }
 
     public bool Running { get; set; }

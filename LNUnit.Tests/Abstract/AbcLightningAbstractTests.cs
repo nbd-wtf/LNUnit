@@ -86,10 +86,10 @@ public abstract class AbcLightningAbstractTests : IDisposable
         GC.SuppressFinalize(this);
 
         // Remove containers
-        _client.RemoveContainer("miner").Wait();
-        _client.RemoveContainer("alice").Wait();
-        _client.RemoveContainer("bob").Wait();
-        _client.RemoveContainer("carol").Wait();
+        _client.RemoveContainer("miner").GetAwaiter().GetResult();
+        _client.RemoveContainer("alice").GetAwaiter().GetResult();
+        _client.RemoveContainer("bob").GetAwaiter().GetResult();
+        _client.RemoveContainer("carol").GetAwaiter().GetResult();
 
         Builder?.Destroy();
         Builder?.Dispose();

@@ -19,7 +19,7 @@ public class LNDChannelAcceptor : IDisposable
         _task = Task.Factory.StartNew(AttachInterceptor, _cancellationTokenSource.Token);
         OnChannelRequest = interceptLogic;
         while (!Running)
-            Task.Delay(100).Wait();
+            Task.Delay(100).GetAwaiter().GetResult();
     }
 
     public bool Running { get; private set; }
@@ -69,7 +69,7 @@ public class LNDChannelAcceptor : IDisposable
     public void Cancel()
     {
         _cancellationTokenSource.Cancel();
-        while (!_task.IsCompleted) Task.Delay(100).Wait();
+        while (!_task.IsCompleted) Task.Delay(100).GetAwaiter().GetResult();
         Running = false;
         Dispose();
     }

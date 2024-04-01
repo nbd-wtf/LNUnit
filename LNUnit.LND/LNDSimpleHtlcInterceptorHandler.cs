@@ -22,7 +22,7 @@ public class LNDSimpleHtlcInterceptorHandler : IDisposable
             TaskCreationOptions.LongRunning, TaskScheduler.Current);
         OnIntercept = interceptLogic;
         while (!Running)
-            Task.Delay(100).Wait();
+            Task.Delay(100).GetAwaiter().GetResult();
     }
 
     public bool Running { get; private set; }
@@ -73,7 +73,7 @@ public class LNDSimpleHtlcInterceptorHandler : IDisposable
     public void Cancel()
     {
         _cancellationTokenSource.Cancel();
-        while (!_task.IsCompleted) Task.Delay(100).Wait();
+        while (!_task.IsCompleted) Task.Delay(100).GetAwaiter().GetResult();
         Running = false;
         Dispose();
     }

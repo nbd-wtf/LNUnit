@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using LNUnit.Setup;
@@ -14,7 +16,7 @@ public class DockerTest
     [OneTimeSetUp]
     public async Task Setup()
     {
-        PullRedis5().Wait();
+        await PullRedis5();
         await _client.Networks.PruneNetworksAsync(new NetworksDeleteUnusedParameters());
     }
 

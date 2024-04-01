@@ -16,7 +16,7 @@ public class LNDStateMonitor
         _task = Task.Factory.StartNew(SubscribeHtlcEventStream, _cancellationTokenSource.Token);
         OnStateChange = onStateChange;
         while (!Running)
-            Task.Delay(100).Wait();
+            Task.Delay(100).GetAwaiter().GetResult();
     }
 
     public bool Running { get; set; }
