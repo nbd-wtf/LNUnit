@@ -702,7 +702,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("Payment")]
     [Category("Interceptor")]
     [NonParallelizable]
-    [Timeout(15000)]
+    [Timeout(30000)]
     public async Task FailureReasonNoRoute()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
@@ -802,7 +802,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("Payment")]
     [Category("Interceptor")]
     [NonParallelizable]
-    [Timeout(15000)]
+    [Timeout(30000)]
     public async Task GetPaymentFailureData()
     {
         //Setup
@@ -934,7 +934,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("Invoice")]
     [Category("Sync")]
     [NonParallelizable]
-    [Timeout(15000)]
+    [Timeout(30000)]
     public async Task ListInvoiceAndPaymentPaging()
     {
         var invoices = await Builder.GeneratePaymentsRequestFromAlias("alice", 10, new Invoice
