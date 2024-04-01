@@ -649,17 +649,40 @@ public class LNUnitBuilder : IDisposable
                         await this.WaitUntilSyncedToChain(alias);
                         await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
                         //Set fees & htlcs, TLD
-                        var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
-                            new PolicyUpdateRequest
+                        var policySet = false;
+                        var hitcount = 0;
+                        while (!policySet)
+                        {
+                            try
                             {
-                                BaseFeeMsat = c.BaseFeeMsat.GetValueOrDefault(),
-                                ChanPoint = channelPoint,
-                                FeeRatePpm = c.FeeRatePpm.GetValueOrDefault(),
-                                MinHtlcMsat = c.MinHtlcMsat.GetValueOrDefault(),
-                                MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
-                                MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
-                                TimeLockDelta = c.TimeLockDelta
-                            });
+                                var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
+                                    new PolicyUpdateRequest
+                                    {
+                                        BaseFeeMsat = c.BaseFeeMsat.GetValueOrDefault(),
+                                        ChanPoint = channelPoint,
+                                        FeeRatePpm = c.FeeRatePpm.GetValueOrDefault(),
+                                        MinHtlcMsat = c.MinHtlcMsat.GetValueOrDefault(),
+                                        MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
+                                        MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
+                                        TimeLockDelta = c.TimeLockDelta
+                                    });
+                                policySet = true;
+                            }
+                            catch (Grpc.Core.RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
+                                                                   e.Status.Detail.EqualsIgnoreCase("channel from self node has no policy"))
+                            {
+                                if (hitcount == 0)
+                                {
+                                    //generate blocks so we do a status update for sure.
+                                    await BitcoinRpcClient.GenerateAsync(145);
+
+                                }
+
+                                hitcount++;
+                                await Task.Delay(500); //give it some time
+                            }
+                        }
+
                     }
                 }
 
