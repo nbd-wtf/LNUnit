@@ -187,9 +187,9 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
     private void WaitNodesReady()
     {
-        var a = Builder.WaitUntilAliasIsServerReady("alice");
-        var b = Builder.WaitUntilAliasIsServerReady("bob");
-        var c = Builder.WaitUntilAliasIsServerReady("carol");
+        var a = Builder.WaitUntilLndAliasIsServerReady("alice");
+        var b = Builder.WaitUntilLndAliasIsServerReady("bob");
+        var c = Builder.WaitUntilLndAliasIsServerReady("carol");
         Task.WaitAll(a, b, c);
     }
 
@@ -733,7 +733,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         paymentTask.Status.PrintDump();
         var payment = await paymentTask;
         await Builder.RestartByAlias("carol", 0, true, lndRoot: _lndRoot);
-        await Builder.WaitUntilAliasIsServerReady("carol");
+        await Builder.WaitUntilLndAliasIsServerReady("carol");
         payment.PrintDump();
         paymentTask.Dispose();
         Assert.That(payment != null && payment.Status == Payment.Types.PaymentStatus.Failed);
@@ -836,7 +836,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         paymentTask.Status.PrintDump();
         var payment = await paymentTask;
         await Builder.RestartByAlias("carol", 0, true, lndRoot: _lndRoot);
-        await Builder.WaitUntilAliasIsServerReady("carol");
+        await Builder.WaitUntilLndAliasIsServerReady("carol");
         payment.PrintDump();
         paymentTask.Dispose();
         Assert.That(payment != null && payment.Status == Payment.Types.PaymentStatus.Failed);
@@ -946,8 +946,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             ValueMsat = 1003 //1 satoshi, fees will be 0 because it is direct peer,
         });
 
-        var alice = await Builder.WaitUntilAliasIsServerReady("alice");
-        var bob = await Builder.WaitUntilAliasIsServerReady("bob");
+        var alice = await Builder.WaitUntilLndAliasIsServerReady("alice");
+        var bob = await Builder.WaitUntilLndAliasIsServerReady("bob");
 
         //purge data
         await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest());
@@ -1004,8 +1004,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             ValueMsat = 1003 //1 satoshi, fees will be 0 because it is direct peer,
         });
 
-        var alice = await Builder.WaitUntilAliasIsServerReady("alice");
-        var bob = await Builder.WaitUntilAliasIsServerReady("bob");
+        var alice = await Builder.WaitUntilLndAliasIsServerReady("alice");
+        var bob = await Builder.WaitUntilLndAliasIsServerReady("bob");
 
         //purge data
         await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest());

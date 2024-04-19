@@ -299,8 +299,65 @@ public class LNUnitBuilder : IDisposable
                 TLSCertBase64 = tlsCertBase64
             });
         }
+        //Setup Eclair Nodes
+        foreach (var n in Configuration.EclairNodes) //TODO: can do multiple at once
+        {
+            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag);
+            var createContainerParameters = new CreateContainerParameters
+            {
+                Image = $"{n.Image}:{n.Tag}",
+                HostConfig = new HostConfig
+                {
+                    NetworkMode = $"{Configuration.DockerNetworkId}",
+                    Links = new List<string> { n.BitcoinBackendName }
+                },
+                Name = n.Name,
+                Hostname = n.Name,
+                Cmd = n.Cmd
+            };
+            if (n.Binds.Any()) createContainerParameters.HostConfig.Binds = n.Binds;
+            var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(createContainerParameters);
+            n.DockerContainerId = nodeContainer.ID;
+            var success =
+                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
+            //Not always having IP yet.
+            var ipAddress = string.Empty;
+            ContainerInspectResponse? inspectionResponse = null;
+            while (ipAddress.IsEmpty())
+            {
+                inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
+                ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
+            }
 
-
+            // var basePath =
+            //     !n.Image.Contains("lightning-terminal")
+            //         ? lndRoot
+            //         : "/root/lnd/.lnd"; // "/home/lnd/.lnd" : "/root/lnd/.lnd";
+            // if (n.Image.Contains("lightning-terminal")) await Task.Delay(2000);
+            // var txt = await GetStringFromFS(n.DockerContainerId, $"{basePath}/tls.cert");
+            // var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
+            // var data = await GetBytesFromFS(n.DockerContainerId,
+            //     $"{basePath}/data/chain/bitcoin/regtest/admin.macaroon");
+            // var adminMacaroonBase64String = Convert.ToBase64String(data);
+            //
+            //
+            // var adminMacaroonTar =
+            //     await GetTarStreamFromFS(n.DockerContainerId,
+            //         $"{basePath}/data/chain/bitcoin/regtest/admin.macaroon");
+            //
+            //
+            // lndSettings.Add(new LNDSettings
+            // {
+            //     GrpcEndpoint = $"https://{ipAddress}:10009/",
+            //     MacaroonBase64 = adminMacaroonBase64String,
+            //     TLSCertBase64 = tlsCertBase64
+            // });
+        }
+        if (Configuration.EclairNodes.Any())
+        {
+            var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
+            
+        }
         if (Configuration.LNDNodes.Any())
         {
             var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
@@ -609,7 +666,7 @@ public class LNUnitBuilder : IDisposable
         {
             LNDNodePool?.AddNode(await GetLNDSettingsFromContainer(alias, lndRoot));
 
-            var node = await WaitUntilAliasIsServerReady(alias);
+            var node = await WaitUntilLndAliasIsServerReady(alias);
             //reset channels
             foreach (var nodes in Configuration.LNDNodes.Where(x => x.Name == alias))
                 foreach (var c in nodes.Channels)
@@ -729,7 +786,7 @@ public class LNUnitBuilder : IDisposable
         }
     }
 
-    public async Task<LNDNodeConnection> WaitUntilAliasIsServerReady(string alias)
+    public async Task<LNDNodeConnection> WaitUntilLndAliasIsServerReady(string alias)
     {
         LNDNodeConnection? ready = null;
         while (ready == null)
@@ -986,7 +1043,7 @@ public static class LNUnitBuilderExtensions
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/eclair",
         string tagName = "0.6.0", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false)
+        string postgresDSN = null)
     {
         var cmd = new List<string>
         {
