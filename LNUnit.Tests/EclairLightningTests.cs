@@ -18,11 +18,11 @@ using Serilog;
 using ServiceStack;
 using ServiceStack.Text;
 using Assert = NUnit.Framework.Assert;
- 
+
 namespace LNUnit.Tests.Fixture;
 
 [TestFixture("postgres", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
-public  class EclairLightningTests : IDisposable
+public class EclairLightningTests : IDisposable
 {
     public EclairLightningTests(string dbType,
         string lndImage = "custom_lnd",
@@ -69,7 +69,7 @@ public  class EclairLightningTests : IDisposable
             PostgresFixture.AddDb("bob");
             PostgresFixture.AddDb("carol");
         }
-        
+
         await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0", ["bitcoin:latest", "bitcoin:27.0"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
@@ -151,7 +151,7 @@ public  class EclairLightningTests : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "alice"
                 }
-            ],  mapTotmp: true,
+            ], mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         Builder.AddPolarEclairNode("carol",
@@ -180,7 +180,7 @@ public  class EclairLightningTests : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "bob"
                 }
-            ],  mapTotmp: true,
+            ], mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
 
         await Builder.Build();
@@ -237,5 +237,5 @@ public  class EclairLightningTests : IDisposable
     {
         await Task.Delay(10000);
     }
-   
+
 }

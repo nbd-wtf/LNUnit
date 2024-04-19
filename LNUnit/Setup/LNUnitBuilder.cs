@@ -356,7 +356,7 @@ public class LNUnitBuilder : IDisposable
         if (Configuration.EclairNodes.Any())
         {
             var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
-            
+
         }
         if (Configuration.LNDNodes.Any())
         {
