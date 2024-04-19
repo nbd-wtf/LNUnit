@@ -108,8 +108,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
         await _client.RemoveContainer("alice");
         await _client.RemoveContainer("bob");
         await _client.RemoveContainer("carol");
-        
-        Builder.AddBitcoinCoreNode(image:bitcoinImage,tag:bitcoinTag, pullImage:pullBitcoinImage);
+
+        Builder.AddBitcoinCoreNode(image: bitcoinImage, tag: bitcoinTag, pullImage: pullBitcoinImage);
 
         if (pullLndImage) await _client.PullImageAndWaitForCompleted(lndImage, lndTag);
 
