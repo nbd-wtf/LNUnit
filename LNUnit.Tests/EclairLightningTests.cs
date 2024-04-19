@@ -235,7 +235,7 @@ public class EclairLightningTests : IDisposable
     [Test]
     public async Task EclairRunning()
     {
-        await Task.Delay(10000);
+        await Task.Delay(60000);
     }
 
 }

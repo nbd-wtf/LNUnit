@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
+using BTCPayServer.Lightning;
 using Dasync.Collections;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -14,10 +15,12 @@ using NBitcoin.RPC;
 using Org.BouncyCastle.Crypto.Parameters;
 using Routerrpc;
 using ServiceStack;
+using ServiceStack.Text;
 using SharpCompress.Readers;
 using AddressType = Lnrpc.AddressType;
 using HostConfig = Docker.DotNet.Models.HostConfig;
 using Network = NBitcoin.Network;
+using OpenChannelRequest = Lnrpc.OpenChannelRequest;
 
 namespace LNUnit.Setup;
 
@@ -328,7 +331,26 @@ public class LNUnitBuilder : IDisposable
                 inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
                 ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
             }
-
+            var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
+            string connectionString = $"type=eclair;server=http://{ipAddress}:8080;password=bitcoin;bitcoin-host=miner;bitcoin-auth=bitcoin";
+            ILightningClientFactory factory = new LightningClientFactory(Network.RegTest);
+            ILightningClient client = factory.Create(connectionString);
+            var ready = false;
+            while (!ready)
+            {
+                try
+                {
+                    var i = await client.GetInfo(cancelSource.Token);
+                    if (i.Alias != n.Name)
+                        throw new Exception("Somethings wrong");
+                    ready = true;
+                }
+                catch (Exception e)
+                {
+                    //e.PrintDump();
+                }
+            }
+            
             // var basePath =
             //     !n.Image.Contains("lightning-terminal")
             //         ? lndRoot
@@ -355,8 +377,11 @@ public class LNUnitBuilder : IDisposable
         }
         if (Configuration.EclairNodes.Any())
         {
-            var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
-
+            foreach (var e in Configuration.EclairNodes)
+            {
+                
+            }
+            
         }
         if (Configuration.LNDNodes.Any())
         {
