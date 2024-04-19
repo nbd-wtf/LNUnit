@@ -350,7 +350,7 @@ public class LNUnitBuilder : IDisposable
                     //e.PrintDump();
                 }
             }
-            
+
             // var basePath =
             //     !n.Image.Contains("lightning-terminal")
             //         ? lndRoot
@@ -379,9 +379,9 @@ public class LNUnitBuilder : IDisposable
         {
             foreach (var e in Configuration.EclairNodes)
             {
-                
+
             }
-            
+
         }
         if (Configuration.LNDNodes.Any())
         {
