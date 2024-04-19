@@ -1,6 +1,6 @@
 FROM debian:stable-slim
 
-ARG BITCOIN_VERSION=27.0rc1
+ARG BITCOIN_VERSION=27.0
 ENV PATH=/opt/bitcoin-${BITCOIN_VERSION}/bin:$PATH
 
 RUN apt-get update -y \
@@ -9,7 +9,7 @@ RUN apt-get update -y \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN SYS_ARCH="$(uname -m)" \
-  && curl -SLO https://bitcoincore.org/bin/bitcoin-core-27.0/test.rc1/bitcoin-${BITCOIN_VERSION}-${SYS_ARCH}-linux-gnu.tar.gz \
+  && curl -SLO https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-${SYS_ARCH}-linux-gnu.tar.gz \
   && tar -xzf *.tar.gz -C /opt \
   && rm *.tar.gz
 

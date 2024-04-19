@@ -71,6 +71,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         }
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0", ["bitcoin:latest", "bitcoin:27.0"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
@@ -99,17 +100,18 @@ public abstract class AbcLightningAbstractTests : IDisposable
     public LNUnitBuilder? Builder { get; private set; }
 
 
-    public async Task SetupNetwork(string image = "lightninglabs/lnd", string tag = "daily-testing-only",
-        string lndRoot = "/root/.lnd", bool pullImage = false)
+    public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
+        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "27.0",
+         bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
         await _client.RemoveContainer("alice");
         await _client.RemoveContainer("bob");
         await _client.RemoveContainer("carol");
+        
+        Builder.AddBitcoinCoreNode(image:bitcoinImage,tag:bitcoinTag, pullImage:pullBitcoinImage);
 
-        Builder.AddBitcoinCoreNode();
-
-        if (pullImage) await _client.PullImageAndWaitForCompleted(image, tag);
+        if (pullLndImage) await _client.PullImageAndWaitForCompleted(lndImage, lndTag);
 
 
         Builder.AddPolarLNDNode("alice",
@@ -134,7 +136,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp: true,
+            ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarLNDNode("bob",
@@ -145,7 +147,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "alice"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp: true,
+            ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         Builder.AddPolarLNDNode("carol",
@@ -174,7 +176,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "bob"
                 }
-            ], imageName: image, tagName: tag, pullImage: false, acceptKeysend: true, mapTotmp: true,
+            ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
 
         await Builder.Build(lndRoot: lndRoot);
