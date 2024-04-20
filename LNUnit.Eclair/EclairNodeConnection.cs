@@ -9,6 +9,7 @@ public class EclairNodeConnection : IDisposable
     public EclairNodeConnection(EclairSettings s)
     {
         _settings = s;
+        Host = _settings.Host;
         Setup().GetAwaiter().GetResult();
     }
 
@@ -17,6 +18,7 @@ public class EclairNodeConnection : IDisposable
     public byte[] LocalNodePubKeyBytes => Convert.FromHexString(LocalNodePubKey);
     public string LocalAlias { get; internal set; }
     public ILightningClient Client { get; internal set; }
+    public string Host { get; internal set; }
 
     public void Dispose()
     {
@@ -27,5 +29,8 @@ public class EclairNodeConnection : IDisposable
     {
         ILightningClientFactory factory = new LightningClientFactory(_settings.Network);
         Client = factory.Create(_settings.BtcPayConnectionString);
+        var info = await Client.GetInfo();
+        LocalAlias = info.Alias;
+        LocalNodePubKey = info.NodeInfoList.First().NodeId.ToString();
     }
 }

@@ -3,6 +3,7 @@ using LNUnit.Setup;
 using LNUnit.Tests.Fixture;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using ServiceStack.Text;
 
@@ -76,7 +77,6 @@ public class EclairLightningTests : IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
-
         // Remove containers
         _client.RemoveContainer("miner").GetAwaiter().GetResult();
         _client.RemoveContainer("alice").GetAwaiter().GetResult();
@@ -142,34 +142,34 @@ public class EclairLightningTests : IDisposable
             ], mapTotmp: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
-        Builder.AddPolarEclairNode("carol",
-            [
-                new LNUnitNetworkDefinition.Channel
-                {
-                    ChannelSize = 10_000_000, //10MSat
-                    RemotePushOnStart = 1_000_000, // 1MSat
-                    RemoteName = "bob"
-                },
-                new LNUnitNetworkDefinition.Channel
-                {
-                    ChannelSize = 10_000_000, //10MSat
-                    RemotePushOnStart = 1_000_000, // 1MSat
-                    RemoteName = "bob"
-                },
-                new LNUnitNetworkDefinition.Channel
-                {
-                    ChannelSize = 10_000_000, //10MSat
-                    RemotePushOnStart = 1_000_000, // 1MSat
-                    RemoteName = "bob"
-                },
-                new LNUnitNetworkDefinition.Channel
-                {
-                    ChannelSize = 10_000_000, //10MSat
-                    RemotePushOnStart = 1_000_000, // 1MSat
-                    RemoteName = "bob"
-                }
-            ], mapTotmp: true,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
+        // Builder.AddPolarEclairNode("carol",
+        //     [
+        //         new LNUnitNetworkDefinition.Channel
+        //         {
+        //             ChannelSize = 10_000_000, //10MSat
+        //             RemotePushOnStart = 1_000_000, // 1MSat
+        //             RemoteName = "bob"
+        //         },
+        //         new LNUnitNetworkDefinition.Channel
+        //         {
+        //             ChannelSize = 10_000_000, //10MSat
+        //             RemotePushOnStart = 1_000_000, // 1MSat
+        //             RemoteName = "bob"
+        //         },
+        //         new LNUnitNetworkDefinition.Channel
+        //         {
+        //             ChannelSize = 10_000_000, //10MSat
+        //             RemotePushOnStart = 1_000_000, // 1MSat
+        //             RemoteName = "bob"
+        //         },
+        //         new LNUnitNetworkDefinition.Channel
+        //         {
+        //             ChannelSize = 10_000_000, //10MSat
+        //             RemotePushOnStart = 1_000_000, // 1MSat
+        //             RemoteName = "bob"
+        //         }
+        //     ], mapTotmp: true,
+        //     postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
 
         await Builder.Build();
 
@@ -204,20 +204,6 @@ public class EclairLightningTests : IDisposable
     }
 
 
-    public async Task<bool> IsRunning()
-    {
-        try
-        {
-            var inspect = await _client.Containers.InspectContainerAsync(DbContainerName);
-            return inspect.State.Running;
-        }
-        catch
-        {
-            // ignored
-        }
-
-        return false;
-    }
 
 
     [Test]

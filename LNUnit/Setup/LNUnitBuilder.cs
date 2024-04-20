@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using BTCPayServer.Lightning;
 using Dasync.Collections;
@@ -19,6 +20,7 @@ using SharpCompress.Readers;
 using AddressType = Lnrpc.AddressType;
 using HostConfig = Docker.DotNet.Models.HostConfig;
 using Network = NBitcoin.Network;
+using NodeInfo = BTCPayServer.Lightning.NodeInfo;
 using OpenChannelRequest = Lnrpc.OpenChannelRequest;
 
 namespace LNUnit.Setup;
@@ -404,6 +406,21 @@ public class LNUnitBuilder : IDisposable
                 await Task.Delay(250);
                 if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
+            //Cross Connect Peers
+            foreach (var localNode in EclairNodePool.ReadyNodes.ToImmutableList())
+            {
+                var remotes = EclairNodePool.ReadyNodes.Where(x => x.LocalAlias != localNode.LocalAlias).ToImmutableList();
+                foreach (var remoteNode in remotes)
+                {
+                    await ConnectPeers(localNode, remoteNode);
+                }
+            }
+
+            while (EclairNodePool.ReadyNodes.Count < Configuration.EclairNodes.Count)
+            {
+                await Task.Delay(250);
+                if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
+            }
         }
 
         if (Configuration.LNDNodes.Any())
@@ -642,6 +659,47 @@ public class LNUnitBuilder : IDisposable
 
             throw;
         }
+    }
+
+    private async Task ConnectPeers(EclairNodeConnection node, EclairNodeConnection remoteNode)
+    {
+        var retryCount = 0;
+    do_again:
+        try
+        {
+            var nodeInfo = new NodeInfo(new PubKey(remoteNode.LocalNodePubKey), remoteNode.Host, 9735);
+            var result = await node.Client.ConnectTo(nodeInfo);
+            if (result == ConnectionResult.Ok)
+            {
+                _logger.LogInformation("Connected: {localAlias} -> {remoteAlias}", node.LocalAlias, remoteNode.LocalAlias);
+            }
+            else
+            {
+                _logger.LogWarning("Could NOT Connect: {localAlias} -> {remoteAlias}", node.LocalAlias, remoteNode.LocalAlias);
+
+            }
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "ConnectPeers");
+            //do something
+        }
+        // catch (RpcException e) when (e.Status.Detail.Contains("already connected to peer"))
+        // {
+        //     //ignored
+        // }
+        // catch (RpcException e) when (e.Status.Detail.Contains("server is still in the process of starting"))
+        // {
+        //     retryCount++;
+        //     if (retryCount < 4)
+        //     {
+        //         _logger?.LogDebug("Connect Peer: Server still starting...waiting 500ms.. {RetryCount}", retryCount);
+        //         await Task.Delay(500);
+        //         goto do_again;
+        //     }
+        //
+        //     throw;
+        // }
     }
 
     public async Task WaitGraphReady(string fromAlias, int expectedNodeCount)
