@@ -185,26 +185,6 @@ public class EclairLightningTests : IDisposable
         //Task.WaitAll(a, b, c);
     }
 
-    private async Task WaitGraphReady(string fromAlias = "alice")
-    {
-        var graphReady = false;
-        while (!graphReady)
-        {
-            var graph = await Builder.GetGraphFromAlias(fromAlias);
-            if (graph.Nodes.Count < 3)
-            {
-                "Graph not ready...".Print();
-                await Task.Delay(250); //let the graph sync 
-            }
-            else
-            {
-                graphReady = true;
-            }
-        }
-    }
-
-
-
 
     [Test]
     public async Task EclairRunning()
