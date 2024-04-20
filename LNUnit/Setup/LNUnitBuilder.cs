@@ -1142,7 +1142,7 @@ public static class LNUnitBuilderExtensions
     public static LNUnitBuilder AddPolarEclairNode(this LNUnitBuilder b, string aliasHostname,
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/eclair",
-        string tagName = "0.6.0", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
+        string tagName = "0.10.0", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
         string postgresDSN = null)
     {
         var cmd = new List<string>

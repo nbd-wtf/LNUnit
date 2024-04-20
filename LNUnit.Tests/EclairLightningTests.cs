@@ -9,7 +9,7 @@ using ServiceStack.Text;
 
 namespace LNUnit.Tests;
 
-[TestFixture("sqlite", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
+[TestFixture("sqlite", "polarlightning/eclair", "0.10.0", "/root/.lnd", true)]
 public class EclairLightningTests : IDisposable
 {
     [SetUp]
@@ -91,7 +91,7 @@ public class EclairLightningTests : IDisposable
     public LNUnitBuilder? Builder { get; private set; }
 
 
-    public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
+    public async Task SetupNetwork(string lndImage = "polarlightning/eclair", string lndTag = "0.10.0",
         string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin",
         string bitcoinTag = "27.0",
         bool pullBitcoinImage = false)
@@ -128,7 +128,7 @@ public class EclairLightningTests : IDisposable
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
                 }
-            ],
+            ],pullImage:true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarEclairNode("bob",
@@ -139,7 +139,7 @@ public class EclairLightningTests : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "alice"
                 }
-            ], mapTotmp: true,
+            ], mapTotmp: true,pullImage:true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         // Builder.AddPolarEclairNode("carol",
