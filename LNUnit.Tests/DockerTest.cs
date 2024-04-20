@@ -117,10 +117,10 @@ public class DockerTest
 
     [Test]
     [Category("Docker")]
-    public async Task BuildBitcoin_27_0_rc1_DockerImage()
+    public async Task BuildBitcoin_27_0_DockerImage()
     {
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0rc1",
-            new List<string> { "bitcoin:27.0rc1" });
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0",
+            new List<string> { "bitcoin:27.0" });
     }
 
 
