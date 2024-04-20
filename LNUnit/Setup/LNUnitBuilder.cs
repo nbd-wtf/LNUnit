@@ -412,7 +412,7 @@ public class LNUnitBuilder : IDisposable
                 var remotes = EclairNodePool.ReadyNodes.Where(x => x.LocalAlias != localNode.LocalAlias).ToImmutableList();
                 foreach (var remoteNode in remotes)
                 {
-                    await ConnectPeers(localNode, remoteNode,cancelSource.Token);
+                    await ConnectPeers(localNode, remoteNode, cancelSource.Token);
                 }
             }
 
@@ -624,7 +624,7 @@ public class LNUnitBuilder : IDisposable
         return GetStringFromTar(await GetTarStreamFromFS(containerId, filePath));
     }
 
-    private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode,CancellationToken cancelToken = default)
+    private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode, CancellationToken cancelToken = default)
     {
         var retryCount = 0;
     do_again:
@@ -641,7 +641,7 @@ public class LNUnitBuilder : IDisposable
                 },
                 Perm = true,
                 Timeout = 5
-            }, cancellationToken:cancelToken);
+            }, cancellationToken: cancelToken);
         }
         catch (RpcException e) when (e.Status.Detail.Contains("already connected to peer"))
         {
@@ -661,7 +661,7 @@ public class LNUnitBuilder : IDisposable
         }
     }
 
-    private async Task ConnectPeers(EclairNodeConnection node, EclairNodeConnection remoteNode,CancellationToken cancelToken = default)
+    private async Task ConnectPeers(EclairNodeConnection node, EclairNodeConnection remoteNode, CancellationToken cancelToken = default)
     {
         var retryCount = 0;
     do_again:
