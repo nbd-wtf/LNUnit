@@ -12,14 +12,14 @@
 
     <ItemGroup>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
-        <PackageReference Include="JunitXml.TestLogger" Version="3.1.12" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.3" />
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.3" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="8.0.3" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0" />
-        <PackageReference Include="NBitcoin" Version="7.0.36" />
+        <PackageReference Include="JunitXml.TestLogger" Version="3.1.12"/>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.3"/>
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.3"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="8.0.3"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.9.0"/>
+        <PackageReference Include="NBitcoin" Version="7.0.36"/>
         <PackageReference Include="Npgsql" Version="8.0.2"/>
-        <PackageReference Include="NUnit" Version="3.14.0" />
+        <PackageReference Include="NUnit" Version="3.14.0"/>
         <PackageReference Include="NUnit3TestAdapter" Version="4.5.0"/>
         <PackageReference Include="NUnit.Analyzers" Version="4.1.0">
             <PrivateAssets>all</PrivateAssets>
@@ -29,13 +29,13 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="ServiceStack" Version="8.2.2" />
-        <PackageReference Include="SharpCompress" Version="0.36.0" />
+        <PackageReference Include="ServiceStack" Version="8.2.2"/>
+        <PackageReference Include="SharpCompress" Version="0.36.0"/>
 
-        <PackageReference Include="Serilog.Sinks.Seq" Version="7.0.0" />
+        <PackageReference Include="Serilog.Sinks.Seq" Version="7.0.0"/>
         <!--        <PackageReference Include="Serilog.Sinks.AwsCloudWatch" Version="4.0.182"/>-->
-        <PackageReference Include="Serilog.AspNetCore" Version="8.0.1" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1" />
+        <PackageReference Include="Serilog.AspNetCore" Version="8.0.1"/>
+        <PackageReference Include="Serilog.Sinks.Console" Version="5.0.1"/>
     </ItemGroup>
 
     <ItemGroup>

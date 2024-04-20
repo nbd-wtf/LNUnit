@@ -12,10 +12,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="BTCPayServer.Lightning.All" Version="1.6.0" /> 
-        <PackageReference Include="NBitcoin" Version="7.0.36" />
-        <PackageReference Include="ServiceStack" Version="8.2.2" />
-        <PackageReference Include="SharpCompress" Version="0.36.0" />
+        <PackageReference Include="BTCPayServer.Lightning.All" Version="1.6.0"/>
+        <PackageReference Include="NBitcoin" Version="7.0.36"/>
+        <PackageReference Include="ServiceStack" Version="8.2.2"/>
+        <PackageReference Include="SharpCompress" Version="0.36.0"/>
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0"/>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
         <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
@@ -32,6 +32,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\LNUnit.Eclair\LNUnit.Eclair.csproj"/>
         <ProjectReference Include="..\LNUnit.LND\LNUnit.LND.csproj"/>
     </ItemGroup>
 

@@ -109,7 +109,8 @@ public class PostgresInstanceFixture
             if (db != null)
             {
                 _ip = db.NetworkSettings.Networks.First().Value.IPAddress;
-                DbConnectionStringDotNet = $"Host={_ip};Database=postgres;Username=superuser;Password=superuser;Include Error Detail=true;";
+                DbConnectionStringDotNet =
+                    $"Host={_ip};Database=postgres;Username=superuser;Password=superuser;Include Error Detail=true;";
                 ipAddressReady = true;
             }
             else

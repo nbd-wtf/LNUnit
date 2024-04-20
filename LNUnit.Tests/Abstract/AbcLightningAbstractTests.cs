@@ -3,7 +3,6 @@ using System.Diagnostics;
 using Dasync.Collections;
 using Docker.DotNet;
 using Google.Protobuf;
-using Google.Protobuf.Collections;
 using Grpc.Core;
 using Lnrpc;
 using LNUnit.Extentions;
@@ -21,9 +20,18 @@ using Assert = NUnit.Framework.Assert;
 
 namespace LNUnit.Tests.Abstract;
 
-
 public abstract class AbcLightningAbstractTests : IDisposable
 {
+    private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
+    private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
+    protected readonly string _dbType;
+    protected readonly string _lndImage;
+    protected readonly string _lndRoot;
+    protected readonly bool _pullImage;
+    protected readonly string _tag;
+
+    private ServiceProvider _serviceProvider;
+
     public AbcLightningAbstractTests(string dbType,
         string lndImage = "custom_lnd",
         string tag = "latest",
@@ -36,6 +44,26 @@ public abstract class AbcLightningAbstractTests : IDisposable
         _tag = tag;
         _lndRoot = lndRoot;
         _pullImage = pullImage;
+    }
+
+
+    public string DbContainerName { get; set; } = "postgres";
+
+    public LNUnitBuilder? Builder { get; private set; }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+
+        // Remove containers
+        _client.RemoveContainer("miner").GetAwaiter().GetResult();
+        _client.RemoveContainer("alice").GetAwaiter().GetResult();
+        _client.RemoveContainer("bob").GetAwaiter().GetResult();
+        _client.RemoveContainer("carol").GetAwaiter().GetResult();
+
+        Builder?.Destroy();
+        Builder?.Dispose();
+        _client.Dispose();
     }
 
     [SetUp]
@@ -71,38 +99,16 @@ public abstract class AbcLightningAbstractTests : IDisposable
         }
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0", ["bitcoin:latest", "bitcoin:27.0"]);
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0",
+            ["bitcoin:latest", "bitcoin:27.0"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
 
-
-    public string DbContainerName { get; set; } = "postgres";
-    private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
-
-    private ServiceProvider _serviceProvider;
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-
-        // Remove containers
-        _client.RemoveContainer("miner").GetAwaiter().GetResult();
-        _client.RemoveContainer("alice").GetAwaiter().GetResult();
-        _client.RemoveContainer("bob").GetAwaiter().GetResult();
-        _client.RemoveContainer("carol").GetAwaiter().GetResult();
-
-        Builder?.Destroy();
-        Builder?.Dispose();
-        _client.Dispose();
-    }
-
-    public LNUnitBuilder? Builder { get; private set; }
-
-
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
-        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "27.0",
-         bool pullBitcoinImage = false)
+        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin",
+        string bitcoinTag = "27.0",
+        bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
         await _client.RemoveContainer("alice");
@@ -234,7 +240,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("Payment")]
     [NonParallelizable]
     [Timeout(5000)]
-
     public async Task FailureNoRouteBecauseFeesAreTooHigh()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
@@ -479,7 +484,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
 
     /// <summary>
-    /// Keysend from Alice and Carol to Bob, see how many can clear in 10s.
+    ///     Keysend from Alice and Carol to Bob, see how many can clear in 10s.
     /// </summary>
     /// <param name="threads"></param>
     [Test]
@@ -506,36 +511,26 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var cts = new CancellationTokenSource();
 
         while (sw.ElapsedMilliseconds <= 10_000)
-        {
             Task.WaitAll(
-             Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
-            {
-                var payment = await alice.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
-                    new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
-                if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
                 {
+                    var payment = await alice.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
+                        new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
+                    if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                        Interlocked.Increment(ref success_count);
+                    else
+                        Interlocked.Increment(ref fail_count);
+                }),
+                Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
+                {
+                    var payment = await carol.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
+                        new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
+                    if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                        Interlocked.Increment(ref success_count);
+                    else
+                        Interlocked.Increment(ref fail_count);
                     Interlocked.Increment(ref success_count);
-                }
-                else
-                {
-                    Interlocked.Increment(ref fail_count);
-                }
-            }),
-             Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
-            {
-                var payment = await carol.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
-                    new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
-                if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
-                {
-                    Interlocked.Increment(ref success_count);
-                }
-                else
-                {
-                    Interlocked.Increment(ref fail_count);
-                }
-                Interlocked.Increment(ref success_count);
-            }));
-        }
+                }));
         sw.Stop();
         var attempted_pps = (fail_count + success_count) / (sw.ElapsedMilliseconds / 1000.0);
         $"Attempted Payments: {fail_count + success_count}".Print();
@@ -580,7 +575,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("LNUnit")]
     [NonParallelizable]
     [Timeout(5000)]
-
     public async Task GetChannelPointFromAliases()
     {
         var data = Builder.GetChannelPointFromAliases("alice", "bob");
@@ -621,16 +615,17 @@ public abstract class AbcLightningAbstractTests : IDisposable
     {
         var alice = await Builder.GetNodeFromAlias("alice");
         var addresses = new List<string>();
-        var sendManyRequest = new SendManyRequest()
+        var sendManyRequest = new SendManyRequest
         {
             SatPerVbyte = 10,
             Label = "Test send to multiple",
-            SpendUnconfirmed = true,
+            SpendUnconfirmed = true
         };
         //make destinations
-        for (int i = 0; i < 10; i++)
+        for (var i = 0; i < 10; i++)
         {
-            var address = alice.LightningClient.NewAddress(new NewAddressRequest() { Type = AddressType.TaprootPubkey }).Address;
+            var address = alice.LightningClient.NewAddress(new NewAddressRequest { Type = AddressType.TaprootPubkey })
+                .Address;
             addresses.Add(address);
             sendManyRequest.AddrToAmount.Add(address, 10000);
         }
@@ -641,7 +636,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         await Builder.WaitUntilSyncedToChain("alice");
         //verify last address got funds
-        var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest() { MinConfs = 1, MaxConfs = 20 });
+        var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest { MinConfs = 1, MaxConfs = 20 });
         var confirmedAddresses = new List<string>();
         foreach (var u in unspend.Utxos)
         {
@@ -652,6 +647,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                 confirmedAddresses.Add(exists);
             }
         }
+
         Assert.That(confirmedAddresses.Count, Is.EqualTo(addresses.Count), "Confirmed deposits doesn't match request.");
     }
 
@@ -660,7 +656,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("Invoice")]
     [NonParallelizable]
     [Timeout(5000)]
-
     public async Task FailureInvoiceTimeout()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
@@ -900,13 +895,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
             }
         }
     }
-
-    private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
-    protected readonly string _dbType;
-    protected readonly string _lndImage;
-    protected readonly string _tag;
-    protected readonly string _lndRoot;
-    protected readonly bool _pullImage;
 
     private async Task<string> ToAlias(LNDNodeConnection c, string remotePubkey)
     {

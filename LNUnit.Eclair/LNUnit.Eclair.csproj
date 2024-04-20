@@ -1,0 +1,13 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="BTCPayServer.Lightning.All" Version="1.6.0"/>
+        <PackageReference Include="NBitcoin" Version="7.0.36"/>
+        <PackageReference Include="ServiceStack" Version="8.2.2"/>
+    </ItemGroup>
+</Project>

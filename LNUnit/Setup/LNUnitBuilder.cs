@@ -9,13 +9,12 @@ using Docker.DotNet.Models;
 using Google.Protobuf;
 using Grpc.Core;
 using Lnrpc;
+using LNUnit.Eclair;
 using LNUnit.LND;
 using NBitcoin;
 using NBitcoin.RPC;
-using Org.BouncyCastle.Crypto.Parameters;
 using Routerrpc;
 using ServiceStack;
-using ServiceStack.Text;
 using SharpCompress.Readers;
 using AddressType = Lnrpc.AddressType;
 using HostConfig = Docker.DotNet.Models.HostConfig;
@@ -48,6 +47,8 @@ public class LNUnitBuilder : IDisposable
     public bool IsDestoryed { get; internal set; }
     public RPCClient? BitcoinRpcClient { get; internal set; }
     public LNDNodePool? LNDNodePool { get; internal set; }
+
+    public EclairNodePool? EclairNodePool { get; internal set; }
     public LNUnitNetworkDefinition Configuration { get; set; } = new();
 
     public void Dispose()
@@ -302,9 +303,14 @@ public class LNUnitBuilder : IDisposable
                 TLSCertBase64 = tlsCertBase64
             });
         }
+
+        var eclairSettings = new List<EclairSettings>();
+
         //Setup Eclair Nodes
         foreach (var n in Configuration.EclairNodes) //TODO: can do multiple at once
         {
+            var setting = new EclairSettings();
+
             if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag);
             var createContainerParameters = new CreateContainerParameters
             {
@@ -331,25 +337,32 @@ public class LNUnitBuilder : IDisposable
                 inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
                 ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
             }
+
             var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
-            string connectionString = $"type=eclair;server=http://{ipAddress}:8080;password=bitcoin;bitcoin-host=miner;bitcoin-auth=bitcoin";
+            setting = new EclairSettings
+            {
+                Host = ipAddress,
+                Port = 8080,
+                EclairPassword = "bitcoin",
+                BitcoinHost = "miner",
+                BitcoinAuth = "bitcoin"
+            };
             ILightningClientFactory factory = new LightningClientFactory(Network.RegTest);
-            ILightningClient client = factory.Create(connectionString);
+            var client = factory.Create(setting.BtcPayConnectionString);
             var ready = false;
             while (!ready)
-            {
                 try
                 {
                     var i = await client.GetInfo(cancelSource.Token);
                     if (i.Alias != n.Name)
                         throw new Exception("Somethings wrong");
                     ready = true;
+                    eclairSettings.Add(setting);
                 }
                 catch (Exception e)
                 {
                     //e.PrintDump();
                 }
-            }
 
             // var basePath =
             //     !n.Image.Contains("lightning-terminal")
@@ -375,14 +388,24 @@ public class LNUnitBuilder : IDisposable
             //     TLSCertBase64 = tlsCertBase64
             // });
         }
+
         if (Configuration.EclairNodes.Any())
         {
-            foreach (var e in Configuration.EclairNodes)
+            var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
+
+            //Spun up
+            var nodePoolConfig = new EclairNodePoolConfig();
+            nodePoolConfig.UpdateReadyStatesPeriod(1);
+            foreach (var c in eclairSettings)
+                nodePoolConfig.AddConnectionSettings(c);
+            EclairNodePool = ActivatorUtilities.CreateInstance<EclairNodePool>(_serviceProvider, nodePoolConfig);
+            while (EclairNodePool.ReadyNodes.Count < Configuration.EclairNodes.Count)
             {
-
+                await Task.Delay(250);
+                if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
-
         }
+
         if (Configuration.LNDNodes.Any())
         {
             var cancelSource = new CancellationTokenSource(60 * 1000); //Sanity Timeout
@@ -628,15 +651,12 @@ public class LNUnitBuilder : IDisposable
         {
             var graph = await GetGraphFromAlias(fromAlias);
             if (graph.Nodes.Count < expectedNodeCount)
-            {
                 await Task.Delay(250); //let the graph sync 
-            }
             else
-            {
                 graphReady = true;
-            }
         }
     }
+
     private static string GetStringFromTar(GetArchiveFromContainerResponse tlsCertResponse)
     {
         using (var stream = tlsCertResponse.Stream)
@@ -708,6 +728,7 @@ public class LNUnitBuilder : IDisposable
                         info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
                         await Task.Delay(250);
                     }
+
                     info = new GetInfoResponse();
                     while (!info.SyncedToChain && !info.SyncedToGraph)
                     {
@@ -715,7 +736,7 @@ public class LNUnitBuilder : IDisposable
                         await Task.Delay(250);
                     }
 
-                    await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
+                    await WaitGraphReady(alias, LNDNodePool.TotalNodes);
                     if (resetChannels)
                     {
                         var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
@@ -728,13 +749,12 @@ public class LNUnitBuilder : IDisposable
                         c.ChannelPoint = channelPoint;
                         //Move things along so it is confirmed
                         await BitcoinRpcClient.GenerateAsync(10);
-                        await this.WaitUntilSyncedToChain(alias);
-                        await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
+                        await WaitUntilSyncedToChain(alias);
+                        await WaitGraphReady(alias, LNDNodePool.TotalNodes);
                         //Set fees & htlcs, TLD
                         var policySet = false;
                         var hitcount = 0;
                         while (!policySet)
-                        {
                             try
                             {
                                 var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
@@ -750,21 +770,17 @@ public class LNUnitBuilder : IDisposable
                                     });
                                 policySet = true;
                             }
-                            catch (Grpc.Core.RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
-                                                                   e.Status.Detail.EqualsIgnoreCase("channel from self node has no policy"))
+                            catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
+                                                         e.Status.Detail.EqualsIgnoreCase(
+                                                             "channel from self node has no policy"))
                             {
                                 if (hitcount == 0)
-                                {
                                     //generate blocks so we do a status update for sure.
                                     await BitcoinRpcClient.GenerateAsync(145);
-
-                                }
 
                                 hitcount++;
                                 await Task.Delay(500); //give it some time
                             }
-                        }
-
                     }
                 }
 
@@ -996,7 +1012,8 @@ public static class LNUnitBuilderExtensions
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null, string lndRoot = "/home/lnd/.lnd")
+        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null,
+        string lndRoot = "/home/lnd/.lnd")
     {
         var cmd = new List<string>
         {

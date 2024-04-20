@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LNBolt", "LNBolt\LNBolt.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LNBolt.Tests", "LNBolt.Tests\LNBolt.Tests.csproj", "{4EF1B9FA-3A05-4F23-BB10-8FBE2D657781}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LNUnit.Eclair", "LNUnit.Eclair\LNUnit.Eclair.csproj", "{7E12D1DE-7592-4F63-AA6E-CBDC7EF1ABC7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{4EF1B9FA-3A05-4F23-BB10-8FBE2D657781}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4EF1B9FA-3A05-4F23-BB10-8FBE2D657781}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4EF1B9FA-3A05-4F23-BB10-8FBE2D657781}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7E12D1DE-7592-4F63-AA6E-CBDC7EF1ABC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E12D1DE-7592-4F63-AA6E-CBDC7EF1ABC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E12D1DE-7592-4F63-AA6E-CBDC7EF1ABC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E12D1DE-7592-4F63-AA6E-CBDC7EF1ABC7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

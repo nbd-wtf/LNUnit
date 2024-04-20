@@ -1,5 +1,3 @@
-using System.Net;
-using System.Text;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using LNUnit.Setup;

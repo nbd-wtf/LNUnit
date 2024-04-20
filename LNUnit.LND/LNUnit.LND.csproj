@@ -19,7 +19,7 @@
 
     <ItemGroup>
         <PackageReference Include="EndianBinaryIO" Version="1.1.2"/>
-        <PackageReference Include="Google.Protobuf" Version="3.26.1" />
+        <PackageReference Include="Google.Protobuf" Version="3.26.1"/>
         <PackageReference Include="Grpc.Net.ClientFactory" Version="2.61.0"/>
         <PackageReference Include="Grpc.Net.Client" Version="2.61.0"/>
         <PackageReference Include="Grpc.Net.Common" Version="2.61.0"/>
@@ -33,12 +33,12 @@
 
         <PackageReference Include="Microsoft.NETCore.Targets" Version="5.0.0"/>
 
-        <PackageReference Include="NBitcoin" Version="7.0.36" />
+        <PackageReference Include="NBitcoin" Version="7.0.36"/>
 
         <PackageReference Include="Portable.BouncyCastle" Version="1.9.0"/>
 
         <PackageReference Include="Serilog" Version="3.1.1"/>
-        <PackageReference Include="ServiceStack.Text" Version="8.2.2" />
+        <PackageReference Include="ServiceStack.Text" Version="8.2.2"/>
         <PackageReference Include="System.Configuration.ConfigurationManager" Version="8.0.0"/>
     </ItemGroup>
 

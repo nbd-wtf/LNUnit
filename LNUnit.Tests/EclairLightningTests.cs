@@ -1,43 +1,16 @@
-using System.Collections.Immutable;
-using System.Diagnostics;
-using Dasync.Collections;
 using Docker.DotNet;
-using Google.Protobuf;
-using Google.Protobuf.Collections;
-using Grpc.Core;
-using Lnrpc;
-using LNUnit.Extentions;
-using LNUnit.LND;
 using LNUnit.Setup;
 using LNUnit.Tests.Fixture;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Routerrpc;
 using Serilog;
-using ServiceStack;
 using ServiceStack.Text;
-using Assert = NUnit.Framework.Assert;
 
-namespace LNUnit.Tests.Fixture;
+namespace LNUnit.Tests;
 
-[TestFixture("postgres", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
+[TestFixture("sqlite", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
 public class EclairLightningTests : IDisposable
 {
-    public EclairLightningTests(string dbType,
-        string lndImage = "custom_lnd",
-        string tag = "latest",
-        string lndRoot = "/root/.lnd",
-        bool pullImage = false
-    )
-    {
-        _dbType = dbType;
-        _lndImage = lndImage;
-        _tag = tag;
-        _lndRoot = lndRoot;
-        _pullImage = pullImage;
-    }
-
     [SetUp]
     public async Task PerTestSetUp()
     {
@@ -70,10 +43,24 @@ public class EclairLightningTests : IDisposable
             PostgresFixture.AddDb("carol");
         }
 
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0", ["bitcoin:latest", "bitcoin:27.0"]);
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0",
+            ["bitcoin:latest", "bitcoin:27.0"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
+    public EclairLightningTests(string dbType,
+        string lndImage = "custom_lnd",
+        string tag = "latest",
+        string lndRoot = "/root/.lnd",
+        bool pullImage = false
+    )
+    {
+        _dbType = dbType;
+        _lndImage = lndImage;
+        _tag = tag;
+        _lndRoot = lndRoot;
+        _pullImage = pullImage;
+    }
 
 
     public string DbContainerName { get; set; } = "postgres";
@@ -105,8 +92,9 @@ public class EclairLightningTests : IDisposable
 
 
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
-        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "27.0",
-         bool pullBitcoinImage = false)
+        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin",
+        string bitcoinTag = "27.0",
+        bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
         await _client.RemoveContainer("alice");
@@ -235,7 +223,6 @@ public class EclairLightningTests : IDisposable
     [Test]
     public async Task EclairRunning()
     {
-        await Task.Delay(60000);
+        await Task.Delay(5000);
     }
-
 }

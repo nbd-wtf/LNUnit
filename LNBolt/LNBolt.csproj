@@ -15,9 +15,9 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="EndianBinaryIO" Version="1.1.2"/>
-        <PackageReference Include="NBitcoin" Version="7.0.36" />
+        <PackageReference Include="NBitcoin" Version="7.0.36"/>
         <PackageReference Include="Portable.BouncyCastle" Version="1.9.0"/>
-        <PackageReference Include="ServiceStack.Text" Version="8.2.2" />
+        <PackageReference Include="ServiceStack.Text" Version="8.2.2"/>
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 </Project>
