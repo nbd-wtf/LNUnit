@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using BTCPayServer.Lightning;
+using BTCPayServer.Lightning.Eclair.Models;
 using Dasync.Collections;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -16,8 +17,10 @@ using NBitcoin;
 using NBitcoin.RPC;
 using Routerrpc;
 using ServiceStack;
+using ServiceStack.Text;
 using SharpCompress.Readers;
 using AddressType = Lnrpc.AddressType;
+using GetInfoResponse = Lnrpc.GetInfoResponse;
 using HostConfig = Docker.DotNet.Models.HostConfig;
 using Network = NBitcoin.Network;
 using NodeInfo = BTCPayServer.Lightning.NodeInfo;
@@ -421,6 +424,32 @@ public class LNUnitBuilder : IDisposable
                 await Task.Delay(250);
                 if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
+            
+            //Setup Channels (this includes sending funds and waiting)
+            foreach (var node in Configuration.EclairNodes)
+            {
+                var eclair = EclairNodePool.ReadyNodes.First(x => x.LocalAlias == node.Name);
+
+                foreach (var c in node.Channels)
+                {
+                    var remoteNode = EclairNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
+                    var result = await eclair.NodeClient.Open(new PubKey(remoteNode.LocalNodePubKey), c.ChannelSize,
+                        null, 10, ChannelFlags.Public, cancelSource.Token);
+                    if (result != "")
+                        result.PrintDump();
+                    //
+                    // if (result.Result == OpenChannelResult.Ok)
+                    // {
+                    //     _logger.LogInformation("Opened {channel_size} sat channel from {local} to {remote}", eclair.LocalAlias, remoteNode.LocalAlias, c.ChannelSize);
+                    // }
+                    // else
+                    // {
+                    //     _logger.LogError("Could not create eclair channel {error}", result.Result);
+                    //     throw new Exception("Could not create eclair channel");
+                    // }
+                    await BitcoinRpcClient.GenerateAsync(6);
+                }
+            }
         }
 
         if (Configuration.LNDNodes.Any())
@@ -667,11 +696,15 @@ public class LNUnitBuilder : IDisposable
     do_again:
         try
         {
-            var nodeInfo = new NodeInfo(new PubKey(remoteNode.LocalNodePubKey), remoteNode.Host, 9735);
-            var result = await node.Client.ConnectTo(nodeInfo, cancelToken);
-            if (result == ConnectionResult.Ok)
+            // var nodeInfo = new NodeInfo(new PubKey(remoteNode.LocalNodePubKey), remoteNode.Host, 9735);
+            var result = await node.NodeClient.Connect(new PubKey(remoteNode.LocalNodePubKey),remoteNode.Host,9735, cancelToken);
+            if (result == "connected")
             {
                 _logger.LogInformation("Connected: {localAlias} -> {remoteAlias}", node.LocalAlias, remoteNode.LocalAlias);
+            }
+            else if (result == "already connected")
+            {
+                _logger.LogInformation("Already Connected: {localAlias} -> {remoteAlias}", node.LocalAlias, remoteNode.LocalAlias);
             }
             else
             {
@@ -1165,7 +1198,8 @@ public static class LNUnitBuilderExtensions
             "--datadir=/home/eclair/.eclair",
             "--printToConsole=true",
             "--on-chain-fees.feerate-tolerance.ratio-low=0.00001",
-            "--on-chain-fees.feerate-tolerance.ratio-high=10000.0"
+            "--on-chain-fees.feerate-tolerance.ratio-high=10000.0",
+            "--eclair.relay.fees=1000"
         };
 
 

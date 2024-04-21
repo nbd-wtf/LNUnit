@@ -1,4 +1,5 @@
 using BTCPayServer.Lightning;
+using BTCPayServer.Lightning.Eclair;
 
 namespace LNUnit.Eclair;
 
@@ -17,7 +18,7 @@ public class EclairNodeConnection : IDisposable
 
     public byte[] LocalNodePubKeyBytes => Convert.FromHexString(LocalNodePubKey);
     public string LocalAlias { get; internal set; }
-    public ILightningClient Client { get; internal set; }
+    public EclairClientV2 NodeClient { get; internal set; }
     public string Host { get; internal set; }
 
     public void Dispose()
@@ -27,10 +28,11 @@ public class EclairNodeConnection : IDisposable
 
     private async Task Setup()
     {
-        ILightningClientFactory factory = new LightningClientFactory(_settings.Network);
-        Client = factory.Create(_settings.BtcPayConnectionString);
-        var info = await Client.GetInfo();
+        // ILightningClientFactory factory = new LightningClientFactory(_settings.Network);
+        //NodeClient = factory.Create(_settings.BtcPayConnectionString);
+        NodeClient = new EclairClientV2(_settings.Uri, _settings.EclairPassword, _settings.Network);
+        var info = await NodeClient.GetInfo();
         LocalAlias = info.Alias;
-        LocalNodePubKey = info.NodeInfoList.First().NodeId.ToString();
+        LocalNodePubKey = info.NodeId.ToString();
     }
 }

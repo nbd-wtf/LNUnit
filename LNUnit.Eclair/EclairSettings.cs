@@ -4,6 +4,8 @@ namespace LNUnit.Eclair;
 
 public class EclairSettings
 {
+    public Uri Uri => new Uri($"http://{Host}:{Port}");
+    
     public string Host { get; set; }
     public int Port { get; set; }
     public string EclairPassword { get; set; }

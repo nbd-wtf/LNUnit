@@ -9,7 +9,7 @@ using ServiceStack.Text;
 
 namespace LNUnit.Tests;
 
-[TestFixture("sqlite", "polarlightning/eclair", "0.10.0", "/root/.lnd", true)]
+[TestFixture("sqlite", "polarlightning/eclair", "0.10.0", true)]
 public class EclairLightningTests : IDisposable
 {
     [SetUp]
@@ -46,20 +46,18 @@ public class EclairLightningTests : IDisposable
 
         await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0",
             ["bitcoin:latest", "bitcoin:27.0"]);
-        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
+        await SetupNetwork(_lndImage, _tag,  _pullImage);
     }
 
     public EclairLightningTests(string dbType,
         string lndImage = "custom_lnd",
-        string tag = "latest",
-        string lndRoot = "/root/.lnd",
+        string tag = "latest", 
         bool pullImage = false
     )
     {
         _dbType = dbType;
         _lndImage = lndImage;
-        _tag = tag;
-        _lndRoot = lndRoot;
+        _tag = tag; 
         _pullImage = pullImage;
     }
 
@@ -70,8 +68,7 @@ public class EclairLightningTests : IDisposable
     private ServiceProvider _serviceProvider;
     private readonly string _dbType;
     private readonly string _lndImage;
-    private readonly string _tag;
-    private readonly string _lndRoot;
+    private readonly string _tag; 
     private readonly bool _pullImage;
 
     public void Dispose()
@@ -91,8 +88,8 @@ public class EclairLightningTests : IDisposable
     public LNUnitBuilder? Builder { get; private set; }
 
 
-    public async Task SetupNetwork(string lndImage = "polarlightning/eclair", string lndTag = "0.10.0",
-        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin",
+    public async Task SetupNetwork(string eclairImage = "polarlightning/eclair", string eclairTag = "0.10.0",
+         bool pullEclairImage = false, string bitcoinImage = "bitcoin",
         string bitcoinTag = "27.0",
         bool pullBitcoinImage = false)
     {
@@ -103,7 +100,7 @@ public class EclairLightningTests : IDisposable
 
         Builder.AddBitcoinCoreNode(image: bitcoinImage, tag: bitcoinTag, pullImage: pullBitcoinImage);
 
-        if (pullLndImage) await _client.PullImageAndWaitForCompleted(lndImage, lndTag);
+        if (pullEclairImage) await _client.PullImageAndWaitForCompleted(eclairImage, eclairTag);
 
 
         Builder.AddPolarEclairNode("alice",
@@ -128,7 +125,7 @@ public class EclairLightningTests : IDisposable
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
                 }
-            ],pullImage:true,
+            ],pullImage:true, tagName:eclairTag, imageName: eclairImage,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarEclairNode("bob",

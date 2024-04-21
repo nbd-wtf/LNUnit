@@ -156,7 +156,7 @@ public class EclairNodePool : IDisposable
         //TODO: Surely a better method but probably have to expose calls.
         try
         {
-            var info = node.Client.GetInfo().GetAwaiter().GetResult();
+            var info = node.NodeClient.GetInfo().GetAwaiter().GetResult();
             if (!info.IsErrorResponse())
                 return true;
         }
