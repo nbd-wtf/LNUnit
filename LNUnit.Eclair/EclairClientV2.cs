@@ -10,6 +10,8 @@ using BTCPayServer.Lightning.Eclair.Models;
 using NBitcoin;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ServiceStack;
+using Network = NBitcoin.Network;
 
 namespace BTCPayServer.Lightning.Eclair
 {
@@ -108,12 +110,12 @@ namespace BTCPayServer.Lightning.Eclair
             }, cts);
         }
 
-        public async Task<string> UpdateRelayFee(string channelId, int feeBaseMsat, int feeProportionalMillionths,
+        public async Task<Dictionary<string,string>> UpdateRelayFee(string nodeId, int feeBaseMsat, int feeProportionalMillionths,
             CancellationToken cts = default)
         {
-            return await SendCommandAsync<UpdateRelayFeeRequest, string>("updaterelayfee", new UpdateRelayFeeRequest()
+            return await SendCommandAsync<UpdateRelayFeeRequestV2, Dictionary<string,string>>("updaterelayfee", new UpdateRelayFeeRequestV2()
             {
-                ChannelId = channelId,
+                NodeId = nodeId,
                 FeeBaseMsat = feeBaseMsat,
                 FeeProportionalMillionths = feeProportionalMillionths
             }, cts);

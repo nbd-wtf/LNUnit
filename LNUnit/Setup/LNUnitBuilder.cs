@@ -149,7 +149,7 @@ public class LNUnitBuilder : IDisposable
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
             WaitForBitcoinNodeStartupTimeout = 30000;
             BitcoinRpcClient.HttpClient = new HttpClient
-            { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
+                { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
 
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true });
             var utxos = await BitcoinRpcClient.GenerateAsync(200);
@@ -409,10 +409,12 @@ public class LNUnitBuilder : IDisposable
                 await Task.Delay(250);
                 if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
+
             //Cross Connect Peers
             foreach (var localNode in EclairNodePool.ReadyNodes.ToImmutableList())
             {
-                var remotes = EclairNodePool.ReadyNodes.Where(x => x.LocalAlias != localNode.LocalAlias).ToImmutableList();
+                var remotes = EclairNodePool.ReadyNodes.Where(x => x.LocalAlias != localNode.LocalAlias)
+                    .ToImmutableList();
                 foreach (var remoteNode in remotes)
                 {
                     await ConnectPeers(localNode, remoteNode, cancelSource.Token);
@@ -424,7 +426,7 @@ public class LNUnitBuilder : IDisposable
                 await Task.Delay(250);
                 if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
-            
+
             //Setup Channels (this includes sending funds and waiting)
             foreach (var node in Configuration.EclairNodes)
             {
@@ -435,19 +437,35 @@ public class LNUnitBuilder : IDisposable
                     var remoteNode = EclairNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
                     var result = await eclair.NodeClient.Open(new PubKey(remoteNode.LocalNodePubKey), c.ChannelSize,
                         null, 10, ChannelFlags.Public, cancelSource.Token);
-                    if (result != "")
-                        result.PrintDump();
-                    //
-                    // if (result.Result == OpenChannelResult.Ok)
-                    // {
-                    //     _logger.LogInformation("Opened {channel_size} sat channel from {local} to {remote}", eclair.LocalAlias, remoteNode.LocalAlias, c.ChannelSize);
-                    // }
-                    // else
-                    // {
-                    //     _logger.LogError("Could not create eclair channel {error}", result.Result);
-                    //     throw new Exception("Could not create eclair channel");
-                    // }
+                    OpenChannelResult r = OpenChannelResult.Ok;
+                    string channelId = string.Empty;
+                    if (result.Contains("created channel", StringComparison.OrdinalIgnoreCase))
+                    { 
+                        channelId = result.Replace("created channel", "").Split(" ")[1];
+                        var channel = await eclair.NodeClient.Channel(channelId, cancelSource.Token);
+                        switch (channel.State)
+                        {
+                            case "WAIT_FOR_OPEN_CHANNEL":
+                            case "WAIT_FOR_ACCEPT_CHANNEL":
+                            case "WAIT_FOR_FUNDING_CREATED":
+                            case "WAIT_FOR_FUNDING_SIGNED":
+                            case "WAIT_FOR_FUNDING_LOCKED":
+                            case "WAIT_FOR_FUNDING_CONFIRMED":
+                            case "WAIT_FOR_DUAL_FUNDING_CONFIRMED":
+                                r = OpenChannelResult.NeedMoreConf;
+                                break;
+                        }
+                    }
+                    else if (result.Contains("couldn't publish funding tx", StringComparison.OrdinalIgnoreCase))
+                    {
+                        r = OpenChannelResult.CannotAffordFunding;
+                    }
+
+                  
                     await BitcoinRpcClient.GenerateAsync(6);
+                    //set fees
+                    var relayResult = await eclair.NodeClient.UpdateRelayFee(remoteNode.LocalNodePubKey, (int?)c.BaseFeeMsat ?? 1000, (int?)c.FeeRatePpm ?? 10000, cancelSource.Token);
+                    
                 }
             }
         }
@@ -653,10 +671,11 @@ public class LNUnitBuilder : IDisposable
         return GetStringFromTar(await GetTarStreamFromFS(containerId, filePath));
     }
 
-    private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode, CancellationToken cancelToken = default)
+    private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode,
+        CancellationToken cancelToken = default)
     {
         var retryCount = 0;
-    do_again:
+        do_again:
         try
         {
             node.LightningClient.ConnectPeer(new ConnectPeerRequest
@@ -690,26 +709,30 @@ public class LNUnitBuilder : IDisposable
         }
     }
 
-    private async Task ConnectPeers(EclairNodeConnection node, EclairNodeConnection remoteNode, CancellationToken cancelToken = default)
+    private async Task ConnectPeers(EclairNodeConnection node, EclairNodeConnection remoteNode,
+        CancellationToken cancelToken = default)
     {
         var retryCount = 0;
-    do_again:
+        do_again:
         try
         {
             // var nodeInfo = new NodeInfo(new PubKey(remoteNode.LocalNodePubKey), remoteNode.Host, 9735);
-            var result = await node.NodeClient.Connect(new PubKey(remoteNode.LocalNodePubKey),remoteNode.Host,9735, cancelToken);
+            var result = await node.NodeClient.Connect(new PubKey(remoteNode.LocalNodePubKey), remoteNode.Host, 9735,
+                cancelToken);
             if (result == "connected")
             {
-                _logger.LogInformation("Connected: {localAlias} -> {remoteAlias}", node.LocalAlias, remoteNode.LocalAlias);
+                _logger.LogInformation("Connected: {localAlias} -> {remoteAlias}", node.LocalAlias,
+                    remoteNode.LocalAlias);
             }
             else if (result == "already connected")
             {
-                _logger.LogInformation("Already Connected: {localAlias} -> {remoteAlias}", node.LocalAlias, remoteNode.LocalAlias);
+                _logger.LogInformation("Already Connected: {localAlias} -> {remoteAlias}", node.LocalAlias,
+                    remoteNode.LocalAlias);
             }
             else
             {
-                _logger.LogWarning("Could NOT Connect: {localAlias} -> {remoteAlias}", node.LocalAlias, remoteNode.LocalAlias);
-
+                _logger.LogWarning("Could NOT Connect: {localAlias} -> {remoteAlias}", node.LocalAlias,
+                    remoteNode.LocalAlias);
             }
         }
         catch (Exception e)
@@ -805,75 +828,75 @@ public class LNUnitBuilder : IDisposable
             var node = await WaitUntilLndAliasIsServerReady(alias);
             //reset channels
             foreach (var nodes in Configuration.LNDNodes.Where(x => x.Name == alias))
-                foreach (var c in nodes.Channels)
+            foreach (var c in nodes.Channels)
+            {
+                var remoteNode = LNDNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
+                //Connect Peers
+                //We are doing this above now
+                ConnectPeers(node, remoteNode);
+
+                //Wait until we are synced to the chain so we know we have funds secured to send
+                var info = new GetInfoResponse();
+                while (!info.SyncedToChain && !info.SyncedToGraph)
                 {
-                    var remoteNode = LNDNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
-                    //Connect Peers
-                    //We are doing this above now
-                    ConnectPeers(node, remoteNode);
-
-                    //Wait until we are synced to the chain so we know we have funds secured to send
-                    var info = new GetInfoResponse();
-                    while (!info.SyncedToChain && !info.SyncedToGraph)
-                    {
-                        info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
-                        await Task.Delay(250);
-                    }
-
-                    info = new GetInfoResponse();
-                    while (!info.SyncedToChain && !info.SyncedToGraph)
-                    {
-                        info = await remoteNode.LightningClient.GetInfoAsync(new GetInfoRequest());
-                        await Task.Delay(250);
-                    }
-
-                    await WaitGraphReady(alias, LNDNodePool.TotalNodes);
-                    if (resetChannels)
-                    {
-                        var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
-                        {
-                            NodePubkey = ByteString.CopyFrom(Convert.FromHexString(remoteNode.LocalNodePubKey)),
-                            SatPerVbyte = 10,
-                            LocalFundingAmount = c.ChannelSize,
-                            PushSat = c.RemotePushOnStart
-                        });
-                        c.ChannelPoint = channelPoint;
-                        //Move things along so it is confirmed
-                        await BitcoinRpcClient.GenerateAsync(10);
-                        await WaitUntilSyncedToChain(alias);
-                        await WaitGraphReady(alias, LNDNodePool.TotalNodes);
-                        //Set fees & htlcs, TLD
-                        var policySet = false;
-                        var hitcount = 0;
-                        while (!policySet)
-                            try
-                            {
-                                var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
-                                    new PolicyUpdateRequest
-                                    {
-                                        BaseFeeMsat = c.BaseFeeMsat.GetValueOrDefault(),
-                                        ChanPoint = channelPoint,
-                                        FeeRatePpm = c.FeeRatePpm.GetValueOrDefault(),
-                                        MinHtlcMsat = c.MinHtlcMsat.GetValueOrDefault(),
-                                        MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
-                                        MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
-                                        TimeLockDelta = c.TimeLockDelta
-                                    });
-                                policySet = true;
-                            }
-                            catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
-                                                         e.Status.Detail.EqualsIgnoreCase(
-                                                             "channel from self node has no policy"))
-                            {
-                                if (hitcount == 0)
-                                    //generate blocks so we do a status update for sure.
-                                    await BitcoinRpcClient.GenerateAsync(145);
-
-                                hitcount++;
-                                await Task.Delay(500); //give it some time
-                            }
-                    }
+                    info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
+                    await Task.Delay(250);
                 }
+
+                info = new GetInfoResponse();
+                while (!info.SyncedToChain && !info.SyncedToGraph)
+                {
+                    info = await remoteNode.LightningClient.GetInfoAsync(new GetInfoRequest());
+                    await Task.Delay(250);
+                }
+
+                await WaitGraphReady(alias, LNDNodePool.TotalNodes);
+                if (resetChannels)
+                {
+                    var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
+                    {
+                        NodePubkey = ByteString.CopyFrom(Convert.FromHexString(remoteNode.LocalNodePubKey)),
+                        SatPerVbyte = 10,
+                        LocalFundingAmount = c.ChannelSize,
+                        PushSat = c.RemotePushOnStart
+                    });
+                    c.ChannelPoint = channelPoint;
+                    //Move things along so it is confirmed
+                    await BitcoinRpcClient.GenerateAsync(10);
+                    await WaitUntilSyncedToChain(alias);
+                    await WaitGraphReady(alias, LNDNodePool.TotalNodes);
+                    //Set fees & htlcs, TLD
+                    var policySet = false;
+                    var hitcount = 0;
+                    while (!policySet)
+                        try
+                        {
+                            var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
+                                new PolicyUpdateRequest
+                                {
+                                    BaseFeeMsat = c.BaseFeeMsat.GetValueOrDefault(),
+                                    ChanPoint = channelPoint,
+                                    FeeRatePpm = c.FeeRatePpm.GetValueOrDefault(),
+                                    MinHtlcMsat = c.MinHtlcMsat.GetValueOrDefault(),
+                                    MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
+                                    MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
+                                    TimeLockDelta = c.TimeLockDelta
+                                });
+                            policySet = true;
+                        }
+                        catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
+                                                     e.Status.Detail.EqualsIgnoreCase(
+                                                         "channel from self node has no policy"))
+                        {
+                            if (hitcount == 0)
+                                //generate blocks so we do a status update for sure.
+                                await BitcoinRpcClient.GenerateAsync(145);
+
+                            hitcount++;
+                            await Task.Delay(500); //give it some time
+                        }
+                }
+            }
 
             await Task.Delay(2500);
         }
