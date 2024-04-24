@@ -1,3 +1,4 @@
+using BTCPayServer.Lightning.Eclair.Models;
 using Docker.DotNet;
 using LNUnit.Setup;
 using LNUnit.Tests.Fixture;
@@ -46,18 +47,18 @@ public class EclairLightningTests : IDisposable
 
         await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0",
             ["bitcoin:latest", "bitcoin:27.0"]);
-        await SetupNetwork(_lndImage, _tag,  _pullImage);
+        await SetupNetwork(_lndImage, _tag, _pullImage);
     }
 
     public EclairLightningTests(string dbType,
         string lndImage = "custom_lnd",
-        string tag = "latest", 
+        string tag = "latest",
         bool pullImage = false
     )
     {
         _dbType = dbType;
         _lndImage = lndImage;
-        _tag = tag; 
+        _tag = tag;
         _pullImage = pullImage;
     }
 
@@ -68,7 +69,7 @@ public class EclairLightningTests : IDisposable
     private ServiceProvider _serviceProvider;
     private readonly string _dbType;
     private readonly string _lndImage;
-    private readonly string _tag; 
+    private readonly string _tag;
     private readonly bool _pullImage;
 
     public void Dispose()
@@ -89,8 +90,8 @@ public class EclairLightningTests : IDisposable
 
 
     public async Task SetupNetwork(string eclairImage = "polarlightning/eclair", string eclairTag = "0.10.0",
-         bool pullEclairImage = false, string bitcoinImage = "bitcoin",
-        string bitcoinTag = "27.0",
+        bool pullEclairImage = false, string bitcoinImage = "polarlightning/bitcoind",
+        string bitcoinTag = "26.0",
         bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
@@ -125,7 +126,7 @@ public class EclairLightningTests : IDisposable
                     ChannelSize = 10_000_000, //10MSat
                     RemoteName = "bob"
                 }
-            ],pullImage:true, tagName:eclairTag, imageName: eclairImage,
+            ], pullImage: true, tagName: eclairTag, imageName: eclairImage,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
 
         Builder.AddPolarEclairNode("bob",
@@ -136,7 +137,7 @@ public class EclairLightningTests : IDisposable
                     RemotePushOnStart = 1_000_000, // 1MSat
                     RemoteName = "alice"
                 }
-            ], mapTotmp: true,pullImage:true,
+            ], mapTotmp: true, pullImage: true,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
 
         // Builder.AddPolarEclairNode("carol",
@@ -170,12 +171,27 @@ public class EclairLightningTests : IDisposable
 
         await Builder.Build();
 
-        WaitNodesReady();
+        await WaitNodesReady();
         //await WaitGraphReady();
     }
 
-    private void WaitNodesReady()
+    private async Task WaitNodesReady()
     {
+        var alice = Builder.EclairNodePool.ReadyNodes.First(x => x.LocalAlias == "alice");
+
+        var ready = false;
+        while (!ready)
+        {
+            var n = await alice.NodeClient.AllNodes();
+            if (n.Count >= Builder.EclairNodePool.ReadyNodes.Count)
+            {
+                ready = true;
+                continue;
+            }
+
+            "Nodes not in graph, waiting 250ms".Print();
+            await Task.Delay(250);
+        }
         // var a = Builder.WaitUntilLndAliasIsServerReady("alice");
         // var b = Builder.WaitUntilLndAliasIsServerReady("bob");
         // var c = Builder.WaitUntilLndAliasIsServerReady("carol");
@@ -184,8 +200,21 @@ public class EclairLightningTests : IDisposable
 
 
     [Test]
+    [Timeout(10000)]
     public async Task EclairRunning()
     {
-        await Task.Delay(5000);
+        var alice = Builder.EclairNodePool.ReadyNodes.First(x => x.LocalAlias == "alice");
+        var bob = Builder.EclairNodePool.ReadyNodes.First(x => x.LocalAlias == "bob");
+        var invoice = await alice.NodeClient.CreateInvoice("test", 10_000);
+        var payId = await bob.NodeClient.PayInvoice(new PayInvoiceRequest()
+        {
+            Invoice = invoice.Serialized,
+            MaxAttempts = 1, MaxFeePct = 1,
+        });
+        payId.PrintDump();
+        await Task.Delay(1000);
+
+        var sendStatus = await bob.NodeClient.GetSentInfo(invoice.PaymentHash);
+        sendStatus.PrintDump();
     }
 }

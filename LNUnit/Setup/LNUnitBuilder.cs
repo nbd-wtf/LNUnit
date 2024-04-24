@@ -38,6 +38,8 @@ public class LNUnitBuilder : IDisposable
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
 
+    public Dictionary<string, string> AliasImplementationMap = new Dictionary<string, string>();
+    
     public LNUnitBuilder(LNUnitNetworkDefinition c = null, ILogger<LNUnitBuilder>? logger = null,
         IServiceProvider serviceProvider = null)
     {
@@ -54,13 +56,14 @@ public class LNUnitBuilder : IDisposable
     public LNDNodePool? LNDNodePool { get; internal set; }
 
     public EclairNodePool? EclairNodePool { get; internal set; }
+    
+    
     public LNUnitNetworkDefinition Configuration { get; set; } = new();
 
     public void Dispose()
     {
         _dockerClient.Dispose();
-        if (LNDNodePool != null)
-            LNDNodePool.Dispose();
+        LNDNodePool?.Dispose();
     }
 
 
@@ -100,7 +103,15 @@ public class LNUnitBuilder : IDisposable
             await _dockerClient.Containers.RemoveContainerAsync(n.DockerContainerId,
                 new ContainerRemoveParameters { Force = true, RemoveVolumes = true });
         }
-
+        
+        foreach (var n in Configuration.EclairNodes.Where(x => !x.DockerContainerId.IsEmpty()))
+        {
+            var result = await _dockerClient.Containers.StopContainerAsync(n.DockerContainerId,
+                new ContainerStopParameters { WaitBeforeKillSeconds = 1 });
+            await _dockerClient.Containers.RemoveContainerAsync(n.DockerContainerId,
+                new ContainerRemoveParameters { Force = true, RemoveVolumes = true });
+        }
+        
         if (destoryNetwork) await _dockerClient.Networks.DeleteNetworkAsync(Configuration.DockerNetworkId);
         IsDestoryed = true;
     }
@@ -270,6 +281,7 @@ public class LNUnitBuilder : IDisposable
                 Hostname = n.Name,
                 Cmd = n.Cmd
             };
+            AliasImplementationMap.Add(n.Name,"lnd");
             if (n.Binds.Any()) createContainerParameters.HostConfig.Binds = n.Binds;
             var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(createContainerParameters);
             n.DockerContainerId = nodeContainer.ID;
@@ -315,6 +327,7 @@ public class LNUnitBuilder : IDisposable
         foreach (var n in Configuration.EclairNodes) //TODO: can do multiple at once
         {
             var setting = new EclairSettings();
+            AliasImplementationMap.Add(n.Name,"eclair");
 
             if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag);
             var createContainerParameters = new CreateContainerParameters
@@ -436,7 +449,7 @@ public class LNUnitBuilder : IDisposable
                 {
                     var remoteNode = EclairNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
                     var result = await eclair.NodeClient.Open(new PubKey(remoteNode.LocalNodePubKey), c.ChannelSize,
-                        null, 10, ChannelFlags.Public, cancelSource.Token);
+                        0, 2, ChannelFlags.Public, cancelSource.Token);
                     OpenChannelResult r = OpenChannelResult.Ok;
                     string channelId = string.Empty;
                     if (result.Contains("created channel", StringComparison.OrdinalIgnoreCase))
@@ -587,7 +600,7 @@ public class LNUnitBuilder : IDisposable
 
     public async Task WaitUntilSyncedToChain(string alias)
     {
-        await WaitUntilSyncedToChain(await GetNodeFromAlias(alias));
+        await WaitUntilSyncedToChain(await GetLndNodeFromAlias(alias));
     }
 
     public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
@@ -763,7 +776,7 @@ public class LNUnitBuilder : IDisposable
         var graphReady = false;
         while (!graphReady)
         {
-            var graph = await GetGraphFromAlias(fromAlias);
+            var graph = await GetGraphFromLndAlias(fromAlias);
             if (graph.Nodes.Count < expectedNodeCount)
                 await Task.Delay(250); //let the graph sync 
             else
@@ -806,7 +819,7 @@ public class LNUnitBuilder : IDisposable
 
     public async Task<bool> ShutdownByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false)
     {
-        if (isLND) LNDNodePool?.RemoveNode(await GetNodeFromAlias(alias));
+        if (isLND) LNDNodePool?.RemoveNode(await GetLndNodeFromAlias(alias));
         return await _dockerClient.Containers.StopContainerAsync(alias, new ContainerStopParameters
         {
             WaitBeforeKillSeconds = waitBeforeKillSeconds
@@ -902,18 +915,18 @@ public class LNUnitBuilder : IDisposable
         }
     }
 
-    public async Task<AddInvoiceResponse> GeneratePaymentRequestFromAlias(string alias, Invoice invoice)
+    public async Task<AddInvoiceResponse> GeneratePaymentRequestFromLndAlias(string alias, Invoice invoice)
     {
-        return (await GeneratePaymentsRequestFromAlias(alias, 1, invoice)).First();
+        return (await GeneratePaymentsRequestFromLndAlias(alias, 1, invoice)).First();
         // var node = GetNodeFromAlias(alias);
         // var response = await node.LightningClient.AddInvoiceAsync(invoice);
         // return response;
     }
 
-    public async Task<List<AddInvoiceResponse>> GeneratePaymentsRequestFromAlias(string alias, int count,
+    public async Task<List<AddInvoiceResponse>> GeneratePaymentsRequestFromLndAlias(string alias, int count,
         Invoice invoice)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         var response = new ConcurrentStack<AddInvoiceResponse>();
         await Enumerable.Range(0, count).ParallelForEachAsync(async x =>
         {
@@ -923,14 +936,14 @@ public class LNUnitBuilder : IDisposable
         return response.ToList();
     }
 
-    public async Task<Invoice?> LookupInvoice(string alias, ByteString rHash)
+    public async Task<Invoice?> LookupLndInvoice(string alias, ByteString rHash)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         var response = await node.LightningClient.LookupInvoiceAsync(new PaymentHash { RHash = rHash });
         return response;
     }
 
-    public async Task<LNDNodeConnection> GetNodeFromAlias(string alias)
+    public async Task<LNDNodeConnection> GetLndNodeFromAlias(string alias)
     {
         while (true)
         {
@@ -939,6 +952,11 @@ public class LNUnitBuilder : IDisposable
                 return node;
             await Task.Delay(250);
         }
+    }
+    
+    public string GetImplementationFromAlias(string alias)
+    {
+        return AliasImplementationMap[alias];
     }
 
     public async Task<LNDNodeConnection> WaitUntilLndAliasIsServerReady(string alias)
@@ -954,21 +972,21 @@ public class LNUnitBuilder : IDisposable
         return ready.Clone();
     }
 
-    public async Task<ChannelGraph> GetGraphFromAlias(string alias)
+    public async Task<ChannelGraph> GetGraphFromLndAlias(string alias)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         return await node.LightningClient.DescribeGraphAsync(new ChannelGraphRequest());
     }
 
-    public async Task<ListChannelsResponse> GetChannelsFromAlias(string alias)
+    public async Task<ListChannelsResponse> GetChannelsFromLndAlias(string alias)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         return await node.LightningClient.ListChannelsAsync(new ListChannelsRequest());
     }
 
-    public async Task<Payment?> MakeLightningPaymentFromAlias(string alias, SendPaymentRequest request)
+    public async Task<Payment?> MakeLightningPaymentFromLndAlias(string alias, SendPaymentRequest request)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         request.NoInflightUpdates = true;
         var streamingCallResponse = node.RouterClient.SendPaymentV2(request);
         Payment? paymentResponse = null;
@@ -980,7 +998,7 @@ public class LNUnitBuilder : IDisposable
     public async Task<bool> IsInterceptorActiveForAlias(string alias)
     {
         if (!InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor doesn't exist");
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         return InterceptorHandlers[alias].Running;
     }
 
@@ -988,14 +1006,14 @@ public class LNUnitBuilder : IDisposable
     public async Task<LNDSimpleHtlcInterceptorHandler> GetInterceptor(string alias)
     {
         if (!InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor doesn't exist");
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         return InterceptorHandlers[alias];
     }
 
     public async Task DelayAllHTLCsOnAlias(string alias, int delayMilliseconds)
     {
         if (InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor already attached");
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         var nodeClone = node.Clone();
         InterceptorHandlers.Add(alias, new LNDSimpleHtlcInterceptorHandler(nodeClone, async x =>
         {
@@ -1011,7 +1029,7 @@ public class LNUnitBuilder : IDisposable
 
     public async Task<PolicyUpdateResponse> UpdateChannelPolicyOnAlias(string alias, PolicyUpdateRequest req)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetLndNodeFromAlias(alias);
         var policyUpdateResponse = node.LightningClient.UpdateChannelPolicy(
             req);
         return policyUpdateResponse;
@@ -1111,7 +1129,7 @@ public static class LNUnitBuilderExtensions
                 "-rpcworkqueue=1024",
                 @"-listen=1",
                 @"-listenonion=0",
-                @"-fallbackfee=0.0002"
+                @"-fallbackfee=0.00000001"
             }
         });
     }
@@ -1222,7 +1240,8 @@ public static class LNUnitBuilderExtensions
             "--printToConsole=true",
             "--on-chain-fees.feerate-tolerance.ratio-low=0.00001",
             "--on-chain-fees.feerate-tolerance.ratio-high=10000.0",
-            "--eclair.relay.fees=1000"
+            "--eclair.relay.fees=1000",
+            "--features.option_dual_fund=disabled"
         };
 
 

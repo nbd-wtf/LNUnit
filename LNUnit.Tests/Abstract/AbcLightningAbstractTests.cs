@@ -204,7 +204,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var graphReady = false;
         while (!graphReady)
         {
-            var graph = await Builder.GetGraphFromAlias(fromAlias);
+            var graph = await Builder.GetGraphFromLndAlias(fromAlias);
             if (graph.Nodes.Count < 3)
             {
                 "Graph not ready...".Print();
@@ -242,12 +242,12 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(5000)]
     public async Task FailureNoRouteBecauseFeesAreTooHigh()
     {
-        var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
+        var invoice = await Builder.GeneratePaymentRequestFromLndAlias("carol", new Invoice
         {
             Memo = "This path is a trap, better have max_fees set",
             ValueMsat = 10000 //1 satoshi, looks cheap, but is gonna be expensive with the fees from bob -> carol a hidden cost
         });
-        var payment = await Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest
+        var payment = await Builder.MakeLightningPaymentFromLndAlias("alice", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
             FeeLimitMsat = 0, //max of 1 satoshi, we ain't gonna be fee attacked
@@ -263,12 +263,12 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(5000)]
     public async Task Successful()
     {
-        var invoice = await Builder.GeneratePaymentRequestFromAlias("bob", new Invoice
+        var invoice = await Builder.GeneratePaymentRequestFromLndAlias("bob", new Invoice
         {
             Memo = "This path is a trap, better have max_fees set",
             ValueMsat = 1000 //1 satoshi, fees will be 0 because it is direct peer
         });
-        var payment = await Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest
+        var payment = await Builder.MakeLightningPaymentFromLndAlias("alice", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
             FeeLimitSat = 100000, //max of 1 satoshi, won't be issue as direct peer so fee is 0
@@ -344,8 +344,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             acceptorTasks.Add(channelAcceptor);
         }
 
-        var alice = await Builder.GetNodeFromAlias("alice");
-        var bob = await Builder.GetNodeFromAlias("bob");
+        var alice = await Builder.GetLndNodeFromAlias("alice");
+        var bob = await Builder.GetLndNodeFromAlias("bob");
         //Fail Private
         Assert.CatchAsync<RpcException>(async () =>
         {
@@ -546,7 +546,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(5000)]
     public async Task ExportGraph()
     {
-        var data = await Builder.GetGraphFromAlias("alice");
+        var data = await Builder.GetGraphFromLndAlias("alice");
         data.PrintDump();
         Assert.That(data.Nodes.Count == 3);
     }
@@ -557,9 +557,9 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(1000)]
     public async Task GetChannelsFromAlias()
     {
-        var alice = await Builder.GetChannelsFromAlias("alice");
-        var bob = await Builder.GetChannelsFromAlias("bob");
-        var carol = await Builder.GetChannelsFromAlias("carol");
+        var alice = await Builder.GetChannelsFromLndAlias("alice");
+        var bob = await Builder.GetChannelsFromLndAlias("bob");
+        var carol = await Builder.GetChannelsFromLndAlias("carol");
         Assert.That(alice.Channels.Any());
         "Alice".Print();
         alice.Channels.PrintDump();
@@ -613,7 +613,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(10000)]
     public async Task SendMany_Onchain()
     {
-        var alice = await Builder.GetNodeFromAlias("alice");
+        var alice = await Builder.GetLndNodeFromAlias("alice");
         var addresses = new List<string>();
         var sendManyRequest = new SendManyRequest
         {
@@ -658,7 +658,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(5000)]
     public async Task FailureInvoiceTimeout()
     {
-        var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
+        var invoice = await Builder.GeneratePaymentRequestFromLndAlias("alice", new Invoice
         {
             Memo = "Things are too slow, never gonna work",
             Expiry = 1,
@@ -673,7 +673,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var failed = false;
         try
         {
-            var payment = await Builder.MakeLightningPaymentFromAlias("carol", new SendPaymentRequest
+            var payment = await Builder.MakeLightningPaymentFromLndAlias("carol", new SendPaymentRequest
             {
                 PaymentRequest = invoice.PaymentRequest,
                 FeeLimitSat = 100000000, //max of 1 satoshi, won't be issue as direct peer so fee is 0
@@ -689,7 +689,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         Builder.CancelInterceptorOnAlias("alice");
         Builder.CancelInterceptorOnAlias("bob");
         Builder.CancelInterceptorOnAlias("carol");
-        var invoiceLookup = await Builder.LookupInvoice("alice", invoice.RHash);
+        var invoiceLookup = await Builder.LookupLndInvoice("alice", invoice.RHash);
         Assert.That(invoiceLookup != null);
         Assert.That(invoiceLookup.RHash == invoice.RHash);
         Assert.That(invoiceLookup.State == Invoice.Types.InvoiceState.Canceled);
@@ -702,7 +702,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(30000)]
     public async Task FailureReasonNoRoute()
     {
-        var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
+        var invoice = await Builder.GeneratePaymentRequestFromLndAlias("carol", new Invoice
         {
             Memo = "This path is a trap, better have max_fees set",
             ValueMsat = 10004,
@@ -712,7 +712,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         //Apply HTLC hold to prevent payment from settling
         await Builder.DelayAllHTLCsOnAlias("bob", 600_000); //600s
 
-        var paymentTask = Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest
+        var paymentTask = Builder.MakeLightningPaymentFromLndAlias("alice", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
             FeeLimitMsat = 10000000000000,
@@ -746,7 +746,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         List<AddInvoiceResponse> invoices = new();
         for (var i = 0; i < 10; i++)
         {
-            var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
+            var invoice = await Builder.GeneratePaymentRequestFromLndAlias("alice", new Invoice
             {
                 Memo = "This path is a trap, better have max_fees set",
                 ValueMsat = 1000,
@@ -777,7 +777,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         {
             ii++;
             ii.PrintDump();
-            var payment = await Builder.MakeLightningPaymentFromAlias("carol", new SendPaymentRequest
+            var payment = await Builder.MakeLightningPaymentFromLndAlias("carol", new SendPaymentRequest
             {
                 PaymentRequest = invoice.PaymentRequest,
                 FeeLimitMsat = 1000000000000000, //plenty of money
@@ -805,7 +805,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         //Setup
 
 
-        var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
+        var invoice = await Builder.GeneratePaymentRequestFromLndAlias("carol", new Invoice
         {
             Memo = "This path is a trap, better have max_fees set",
             ValueMsat = 10004, //1 satoshi, fees will be 0 because it is direct peer,
@@ -815,7 +815,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         //Apply HTLC hold to prevent payment from settling
         await Builder.DelayAllHTLCsOnAlias("bob", 600_000); //600s
 
-        var paymentTask = Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest
+        var paymentTask = Builder.MakeLightningPaymentFromLndAlias("alice", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
             FeeLimitMsat = 10000000000000, //max of 1 satoshi, won't be issue as direct peer so fee is 0
@@ -927,7 +927,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(30000)]
     public async Task ListInvoiceAndPaymentPaging()
     {
-        var invoices = await Builder.GeneratePaymentsRequestFromAlias("alice", 10, new Invoice
+        var invoices = await Builder.GeneratePaymentsRequestFromLndAlias("alice", 10, new Invoice
         {
             Memo = "Things are too slow, never gonna work",
             Expiry = 100,
@@ -942,7 +942,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         foreach (var invoice in invoices)
         {
-            var payment = await Builder.MakeLightningPaymentFromAlias("bob", new SendPaymentRequest
+            var payment = await Builder.MakeLightningPaymentFromLndAlias("bob", new SendPaymentRequest
             {
                 PaymentRequest = invoice.PaymentRequest,
                 FeeLimitSat = 100000000,
@@ -985,7 +985,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Timeout(15000)]
     public async Task ListInvoiceAndPaymentNoDatePage()
     {
-        var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
+        var invoice = await Builder.GeneratePaymentRequestFromLndAlias("alice", new Invoice
         {
             Memo = "Things are too slow, never gonna work",
             Expiry = 100,
@@ -998,7 +998,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         //purge data
         await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest());
 
-        var payment = await Builder.MakeLightningPaymentFromAlias("bob", new SendPaymentRequest
+        var payment = await Builder.MakeLightningPaymentFromLndAlias("bob", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
             FeeLimitSat = 100000000,

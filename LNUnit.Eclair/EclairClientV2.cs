@@ -77,13 +77,13 @@ namespace BTCPayServer.Lightning.Eclair
             long? fundingFeerateSatByte = null, ChannelFlags? channelFlags = null,
             CancellationToken cts = default)
         {
-            return await SendCommandAsync<OpenRequest, string>("open", new OpenRequest()
+            return await SendCommandAsync<OpenRequestV2, string>("open", new OpenRequestV2()
             {
                 NodeId = nodeId.ToString(),
                 FundingSatoshis = fundingSatoshis,
-                ChannelFlags = channelFlags,
                 PushMsat = pushMsat,
-                FundingFeerateSatByte = fundingFeerateSatByte
+                FundingFeerateSatByte = fundingFeerateSatByte,
+                AnnounceChannel = true,
             }, cts);
 
         }
@@ -145,13 +145,13 @@ namespace BTCPayServer.Lightning.Eclair
 
         public async Task<List<AllNodesResponse>> AllNodes(CancellationToken cts = default)
         {
-            return await SendCommandAsync<NoRequestModel, List<AllNodesResponse>>("allnodes", NoRequestModel.Instance,
+            return await SendCommandAsync<NoRequestModel, List<AllNodesResponse>>("nodes", NoRequestModel.Instance,
                 cts);
         }
 
         public async Task<List<AllChannelsResponse>> AllChannels(CancellationToken cts = default)
         {
-            return await SendCommandAsync<NoRequestModel, List<AllChannelsResponse>>("allchannels",
+            return await SendCommandAsync<NoRequestModel, List<AllChannelsResponse>>("channels",
                 NoRequestModel.Instance, cts);
         }
 
