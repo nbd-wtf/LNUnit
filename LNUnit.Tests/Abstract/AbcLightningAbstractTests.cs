@@ -1065,13 +1065,16 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var bob = await Builder.WaitUntilAliasIsServerReady("bob");
 
         //purge data
-        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest());
+        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest()
+        {
+            AllPayments = true,
+        });
 
         var payment = await Builder.MakeLightningPaymentFromAlias("bob", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
             FeeLimitSat = 100000000,
-            TimeoutSeconds = 5
+            TimeoutSeconds = 5,
         });
         Assert.That(payment.Status == Payment.Types.PaymentStatus.Succeeded);
 
