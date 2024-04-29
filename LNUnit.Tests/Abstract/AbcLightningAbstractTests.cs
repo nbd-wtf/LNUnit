@@ -5,6 +5,7 @@ using Docker.DotNet;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Grpc.Core;
+using Invoicesrpc;
 using Lnrpc;
 using LNUnit.Extentions;
 using LNUnit.LND;
@@ -271,6 +272,62 @@ public abstract class AbcLightningAbstractTests : IDisposable
         });
         Assert.That(payment.Status == Payment.Types.PaymentStatus.Succeeded);
     }
+
+
+    [Test]
+    [Category("HoldInvoice")]
+    [NonParallelizable]
+    [Timeout(30000)]
+    public async Task HoldInvoice_Settlement()
+    {
+        var alice = await Builder.GetNodeFromAlias("alice");
+        var bob = await Builder.GetNodeFromAlias("bob");
+        var preimage = new byte[32];
+        preimage[0] = 19;
+        var hasher = System.Security.Cryptography.SHA256Managed.Create();
+
+        var hash = hasher.ComputeHash(preimage);
+        var i = bob.InvoiceClient.AddHoldInvoice(new AddHoldInvoiceRequest()
+        {
+            Hash = ByteString.CopyFrom(hash),
+            Memo = "Test HOLD invoice",
+            ValueMsat = 10_000, //10 sat,
+            Expiry = 20,
+        });
+        var paymentResponse = Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest()
+        {
+            PaymentRequest = i.PaymentRequest,
+            NoInflightUpdates = true,
+            TimeoutSeconds = 20,
+        });
+        Task.Run(() =>
+         {
+
+             var run = true;
+             while (run)
+             {
+                 try
+                 {
+                     var settle = bob.InvoiceClient.SettleInvoice(new SettleInvoiceMsg()
+                     {
+                         Preimage = ByteString.CopyFrom(preimage)
+                     });
+                     if (settle != null)
+                         run = false;
+                     Task.Yield().GetAwaiter().GetResult();
+                 }
+                 catch (Exception e)
+                 {
+                     Debug.Print(e.ToString());
+                     // do nothing
+                 }
+
+             }
+         });
+        Assert.That(paymentResponse.GetAwaiter().GetResult() != null);
+
+    }
+
 
     [Test]
     [Category("Balancing")]
