@@ -138,7 +138,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null);
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport:false, nativeSql: _dbType == "postgres" );
 
         Builder.AddPolarLNDNode("bob",
             [
@@ -149,7 +149,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "alice"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null);
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null, lndkSupport:false, nativeSql: _dbType == "postgres" );
 
         Builder.AddPolarLNDNode("carol",
             [
@@ -178,7 +178,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null);
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null, lndkSupport:false, nativeSql: _dbType == "postgres" );
 
         await Builder.Build(lndRoot: lndRoot);
 
@@ -1007,7 +1007,10 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var bob = await Builder.WaitUntilAliasIsServerReady("bob");
 
         //purge data
-        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest());
+        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest()
+        {
+            AllPayments = true
+        });
 
         foreach (var invoice in invoices)
         {
@@ -1015,7 +1018,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
             {
                 PaymentRequest = invoice.PaymentRequest,
                 FeeLimitSat = 100000000,
-                TimeoutSeconds = 50
+                TimeoutSeconds = 50,
             });
             Assert.That(payment.Status == Payment.Types.PaymentStatus.Succeeded);
         }

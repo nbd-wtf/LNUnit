@@ -914,7 +914,8 @@ public static class LNUnitBuilderExtensions
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
-        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null, string lndRoot = "/home/lnd/.lnd")
+        bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null, 
+        string lndRoot = "/home/lnd/.lnd", bool lndkSupport = false, bool nativeSql = false)
     {
         var cmd = new List<string>
         {
@@ -942,6 +943,17 @@ public static class LNUnitBuilderExtensions
             "--gossip.max-channel-update-burst=100",
             "--gossip.channel-update-interval=1s"
         };
+        // if (nativeSql)
+        // {
+        //     cmd.Add("--db.use-native-sql");
+        //
+        // }
+        if (lndkSupport) //TODO: must compile LND with 'dev' flags before can play with this
+        {
+            cmd.Add("--protocol.custom-message=513");
+            cmd.Add("--protocol.custom-nodeann=39");
+            cmd.Add("--protocol.custom-init=39");
+        }
 
         if (!postgresDSN.IsEmpty())
         {
