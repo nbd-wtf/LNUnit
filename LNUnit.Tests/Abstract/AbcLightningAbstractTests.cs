@@ -138,7 +138,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport:false, nativeSql: _dbType == "postgres" );
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport: false, nativeSql: _dbType == "postgres");
 
         Builder.AddPolarLNDNode("bob",
             [
@@ -149,7 +149,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "alice"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null, lndkSupport:false, nativeSql: _dbType == "postgres" );
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null, lndkSupport: false, nativeSql: _dbType == "postgres");
 
         Builder.AddPolarLNDNode("carol",
             [
@@ -178,7 +178,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null, lndkSupport:false, nativeSql: _dbType == "postgres" );
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null, lndkSupport: false, nativeSql: _dbType == "postgres");
 
         await Builder.Build(lndRoot: lndRoot);
 
