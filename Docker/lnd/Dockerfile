@@ -1,6 +1,6 @@
 FROM debian:stable-slim
 
-ARG LND_VERSION=0.17.5-beta
+ARG LND_VERSION=0.18.0-beta
 ENV PATH=/opt/lnd:$PATH
 
 RUN apt-get update -y \
