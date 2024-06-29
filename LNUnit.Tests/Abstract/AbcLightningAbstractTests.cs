@@ -72,7 +72,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         }
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0", ["bitcoin:latest", "bitcoin:27.0"]);
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.1", ["bitcoin:latest", "bitcoin:27.1"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
@@ -102,7 +102,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
 
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
-        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "27.0",
+        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "27.1",
          bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
