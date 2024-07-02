@@ -3,7 +3,7 @@
 namespace LNUnit.Tests;
 
 [TestFixture("boltdb", "lightninglabs/lnd", "daily-testing-only", "/root/.lnd", true)]
-//[TestFixture("boltdb", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+// [TestFixture("boltdb", "lightninglabs/lnd", "v0.17.5-beta", "/root/.lnd", false)]
 public class AbcLightningAbstractTestsBoltDb : LNUnit.Tests.Abstract.AbcLightningAbstractTests
 {
     public AbcLightningAbstractTestsBoltDb(string dbType = "boltdb",

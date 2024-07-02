@@ -711,6 +711,18 @@ public class LNUnitBuilder : IDisposable
         return response.ToList();
     }
 
+    public async Task<Payment> LookupPayment(string alias, ByteString hash)
+    {
+        var node = await GetNodeFromAlias(alias);
+        var streamingCallResponse = node.RouterClient.TrackPaymentV2(new TrackPaymentRequest()
+        {
+            NoInflightUpdates = true,
+            PaymentHash = hash
+        });
+        Payment? paymentResponse = null;
+        await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
+        return paymentResponse!;
+    }
     public async Task<Invoice?> LookupInvoice(string alias, ByteString rHash)
     {
         var node = await GetNodeFromAlias(alias);

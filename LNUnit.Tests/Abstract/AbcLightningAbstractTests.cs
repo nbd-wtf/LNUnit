@@ -759,6 +759,48 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
     [Test]
     [Category("Payment")]
+    [Category("Invoice")]
+    [NonParallelizable]
+    //   [Timeout(5000)]
+    public async Task CheckForSuccessButFailureReasonIsNotNone_LND_18_Bug()
+    {
+        var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
+        {
+            Memo = "weird",
+            Expiry = 1000,
+            ValueMsat = 1003
+        });
+        //Apply HTLC hold to prevent payment from settling 
+        await Builder.DelayAllHTLCsOnAlias("bob", 30_000); //6s
+        await Builder.DelayAllHTLCsOnAlias("carol", 15_000); //6s
+        Payment? payment = null;
+        var failed = false;
+
+        payment = await Builder.MakeLightningPaymentFromAlias("carol", new SendPaymentRequest
+        {
+            PaymentRequest = invoice.PaymentRequest,
+            FeeLimitSat = 100000000,
+            TimeoutSeconds = 15
+        });
+
+
+        Builder.CancelInterceptorOnAlias("bob");
+        Builder.CancelInterceptorOnAlias("carol");
+        Assert.That(payment!.Status == Payment.Types.PaymentStatus.Succeeded);
+        Assert.That(payment!.FailureReason == PaymentFailureReason.FailureReasonNone);
+        var invoiceLookup = await Builder.LookupInvoice("alice", invoice.RHash);
+        Assert.That(invoiceLookup != null);
+        Assert.That(invoiceLookup.RHash == invoice.RHash);
+        Assert.That(invoiceLookup.State == Invoice.Types.InvoiceState.Settled);
+        var paymentLookup = await Builder.LookupPayment("carol", invoiceLookup.RHash);
+        Assert.That(paymentLookup.Status == Payment.Types.PaymentStatus.Succeeded);
+        //This will pass in v0.18.0 and is changing behavior
+        Assert.That(paymentLookup.FailureReason != PaymentFailureReason.FailureReasonNone);
+    }
+
+
+    [Test]
+    [Category("Payment")]
     [Category("Interceptor")]
     [NonParallelizable]
     [Timeout(30000)]
