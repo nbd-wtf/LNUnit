@@ -356,34 +356,34 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var info = n.LightningClient.GetInfo(new GetInfoRequest());
         info.Version.Print();
     }
-    
-  [Test] 
-  [Category("OnChannelEvent")]
-  [NonParallelizable]
-  [Ignore("when needed")]
-  public async Task OnChannelEventBasics()
-  {
-      var a = await Builder.GetNodeFromAlias("alice");
-      var b = await Builder.GetNodeFromAlias("bob");
-      using var e = new LNDChannelEventsHandler(a, OnChannelEvent);
-      using var e2 = new LNDGraphEventsHandler(a, OnGraphEvent);
-      await Task.Delay(5000);
-      await Builder.RestartByAlias("bob");
-      await Task.Delay(30000);
-      e.InterceptCount.PrintDump();
-  }
 
-  private void OnGraphEvent(GraphTopologyUpdate obj)
-  {
-      "OnGraphEvent".Print();
-      obj.PrintDump();
-  }
+    [Test]
+    [Category("OnChannelEvent")]
+    [NonParallelizable]
+    [Ignore("when needed")]
+    public async Task OnChannelEventBasics()
+    {
+        var a = await Builder.GetNodeFromAlias("alice");
+        var b = await Builder.GetNodeFromAlias("bob");
+        using var e = new LNDChannelEventsHandler(a, OnChannelEvent);
+        using var e2 = new LNDGraphEventsHandler(a, OnGraphEvent);
+        await Task.Delay(5000);
+        await Builder.RestartByAlias("bob");
+        await Task.Delay(30000);
+        e.InterceptCount.PrintDump();
+    }
 
-  private void OnChannelEvent(ChannelEventUpdate obj)
-  {
-      "OnChannelEvent".Print();
-      obj.PrintDump();
-  }
+    private void OnGraphEvent(GraphTopologyUpdate obj)
+    {
+        "OnGraphEvent".Print();
+        obj.PrintDump();
+    }
+
+    private void OnChannelEvent(ChannelEventUpdate obj)
+    {
+        "OnChannelEvent".Print();
+        obj.PrintDump();
+    }
 
 
     [Test]
@@ -632,7 +632,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         $"Failed    : {fail_count}".Print();
         var successful_pps = success_count / (sw.ElapsedMilliseconds / 1000.0);
         $"Successful Payments per second: {successful_pps}".Print();
-        
+
         //Let us also pull mission control data
         var mc = await alice.RouterClient.QueryMissionControlAsync(new QueryMissionControlRequest()
         {

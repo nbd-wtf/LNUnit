@@ -18,10 +18,10 @@ public class LNDGraphEventsHandler : IDisposable
 
     public LNDGraphEventsHandler(LNDNodeConnection connection,
         Action<GraphTopologyUpdate> onGraphEvent)
-    { 
+    {
         Node = connection;
-        _task = Task.Factory.StartNew(StartListening, _cancellationTokenSource.Token, 
-            TaskCreationOptions.LongRunning, TaskScheduler.Current); 
+        _task = Task.Factory.StartNew(StartListening, _cancellationTokenSource.Token,
+            TaskCreationOptions.LongRunning, TaskScheduler.Current);
         OnGraphEvent = onGraphEvent;
         while (!Running)
             Task.Delay(100).GetAwaiter().GetResult();
@@ -39,8 +39,8 @@ public class LNDGraphEventsHandler : IDisposable
             _task.Dispose();
             Node.Dispose();
         }
-    } 
-    
+    }
+
     public event Action<GraphTopologyUpdate> OnGraphEvent;
 
     private async Task StartListening()
@@ -51,7 +51,7 @@ public class LNDGraphEventsHandler : IDisposable
             using (var streamingEvents =
                    Node.LightningClient.SubscribeChannelGraph(new GraphTopologySubscription()
                    {
-                       
+
                    }))
             {
                 Running = true;
@@ -73,7 +73,7 @@ public class LNDGraphEventsHandler : IDisposable
         Running = false;
     }
 
-   
+
 
     public void Cancel()
     {

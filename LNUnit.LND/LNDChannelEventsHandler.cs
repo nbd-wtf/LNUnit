@@ -30,7 +30,7 @@ public class LNDChannelEventsHandler : IDisposable
     public bool Running { get; private set; }
     public ulong InterceptCount { get; private set; }
 
-    
+
     public void Dispose()
     {
         if (!_disposed)
@@ -39,8 +39,8 @@ public class LNDChannelEventsHandler : IDisposable
             _task.Dispose();
             Node.Dispose();
         }
-    } 
-    
+    }
+
     public event Action<Lnrpc.ChannelEventUpdate> OnChannelEvent;
 
     private async Task StartListening()
@@ -48,11 +48,11 @@ public class LNDChannelEventsHandler : IDisposable
         Debug.Print($"StartListening: {Node.LocalAlias}");
         try
         {
-            
+
             using (var streamingEvents =
-                   Node.LightningClient.SubscribeChannelEvents (new ChannelEventSubscription()
+                   Node.LightningClient.SubscribeChannelEvents(new ChannelEventSubscription()
                    {
-                       
+
                    }))
             {
                 Running = true;
@@ -74,7 +74,7 @@ public class LNDChannelEventsHandler : IDisposable
         Running = false;
     }
 
-   
+
 
     public void Cancel()
     {
