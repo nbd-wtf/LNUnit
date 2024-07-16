@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>LNUnit.LND</PackageId>
-        <Version>1.6.8</Version>
+        <Version>1.7.0</Version>
         <PackageDescription>LNUnit LND Typed Clients</PackageDescription>
     </PropertyGroup>
 
@@ -58,6 +58,9 @@
         <Protobuf Include="Grpc\peersrpc\peers.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
         <Protobuf Include="Grpc\devrpc\dev.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
         <Protobuf Include="Grpc\neutrinorpc\neutrino.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+<!--       loopd-->
+        <Protobuf Include="Grpc\looprpc\client.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
+        <Protobuf Include="Grpc\swapserverrpc\common.proto" GrpcServices="Client" ProtoRoot="Grpc" OutputDir="$(Protobuf_OutputPath)%(RelativeDir)"/>
 
     </ItemGroup>
 

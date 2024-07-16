@@ -14,3 +14,6 @@ wget -O ./Grpc/stateservice.proto https://raw.githubusercontent.com/lightningnet
 wget -O ./Grpc/neutrinorpc/neutrino.proto https://raw.githubusercontent.com/lightningnetwork/lnd/master/lnrpc/neutrinorpc/neutrino.proto
 wget -O ./Grpc/peersrpc/peers.proto https://raw.githubusercontent.com/lightningnetwork/lnd/master/lnrpc/peersrpc/peers.proto
 wget -O ./Grpc/devrpc/dev.proto https://raw.githubusercontent.com/lightningnetwork/lnd/master/lnrpc/devrpc/dev.proto
+# loopd
+wget -O ./Grpc/looprpc/client.proto  https://raw.githubusercontent.com/lightninglabs/loop/master/looprpc/client.proto
+wget -O ./Grpc/swapserverrpc/common.proto  https://raw.githubusercontent.com/lightninglabs/loop/master/swapserverrpc/common.proto
