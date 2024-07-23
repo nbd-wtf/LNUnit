@@ -17,3 +17,5 @@ public class LNDSettings
     /// </summary>
     public string? MacaroonBase64 { get; set; }
 }
+
+public class LoopSettings : LNDSettings;

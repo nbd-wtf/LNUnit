@@ -1,14 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
+        <TargetFrameworks>net8.0</TargetFrameworks>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <Version>1.6.8</Version>
+        <Version>1.7.0</Version>
         <IsPackable>true</IsPackable>
         <PackageId>LNUnit</PackageId>
         <PackageDescription>Lightning Network Unit Testing Framework</PackageDescription>
+        <LangVersion>12.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
