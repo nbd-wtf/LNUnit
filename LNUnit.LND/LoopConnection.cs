@@ -1,9 +1,9 @@
-﻿using System.Security.Cryptography.X509Certificates; 
+﻿using System.Security.Cryptography.X509Certificates;
 using Grpc.Core;
-using Grpc.Net.Client; 
+using Grpc.Net.Client;
 using Looprpc;
-using Microsoft.Extensions.Logging; 
-using ServiceStack; 
+using Microsoft.Extensions.Logging;
+using ServiceStack;
 
 namespace LNUnit.LND;
 
@@ -27,9 +27,9 @@ public class LoopConnection : IDisposable
     public LoopSettings Settings { get; internal set; }
 
     public string Host { get; internal set; }
-    public GrpcChannel gRPCChannel { get; internal set; } 
-     public Looprpc.SwapClient.SwapClientClient SwapClient { get; set; }
-    
+    public GrpcChannel gRPCChannel { get; internal set; }
+    public Looprpc.SwapClient.SwapClientClient SwapClient { get; set; }
+
 
     public void StartWithBase64(string tlsCertBase64, string macaroonBase64, string host)
     {
