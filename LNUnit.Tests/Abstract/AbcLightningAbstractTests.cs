@@ -1,11 +1,13 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using Dasync.Collections;
 using Docker.DotNet;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Grpc.Core;
 using Invoicesrpc;
+using LNBolt;
 using Lnrpc;
 using LNUnit.Extentions;
 using LNUnit.LND;
@@ -14,11 +16,17 @@ using LNUnit.Tests.Fixture;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using NBitcoin;
+using NLightning.Bolts.BOLT11.Types;
+using NLightning.Bolts.BOLT9;
+using NLightning.Common.Managers;
+using NLightning.Common.Types;
 using Routerrpc;
 using Serilog;
 using ServiceStack;
 using ServiceStack.Text;
 using Assert = NUnit.Framework.Assert;
+using Network = NLightning.Common.Types.Network;
 
 namespace LNUnit.Tests.Abstract;
 
@@ -228,7 +236,81 @@ public abstract class AbcLightningAbstractTests : IDisposable
         return false;
     }
 
+    [Test]
+    [NonParallelizable]
+    [Category("Interceptor")]
+    public async Task VirtualNodeInvoicePaymentFlowDemo()
+    {
+        var virtualNodeKey = new Key(); //Random node key
+        SecureKeyManager.Initialize(virtualNodeKey.ToBytes());
+        ConfigManager.Instance.Network = NLightning.Common.Types.Network.REG_TEST;
+        //Node we will intercept at and use as hint
+        var alice = await Builder!.WaitUntilAliasIsServerReady("alice");
+        //Node we will pay from
+        var bob = await Builder!.WaitUntilAliasIsServerReady("bob");
+        //Build the invoice
+        var preimageHexString = RandomNumberGenerator.GetHexString(64);
+        var hashHexString = SHA256.HashData(Convert.FromHexString(preimageHexString)).ToHex();
+        var paymentSecretHexString = RandomNumberGenerator.GetHexString(64);
+        var paymentHash = uint256.Parse(hashHexString);
+        var paymentSecret = uint256.Parse(paymentSecretHexString); ;
+        var invoice = new NLightning.Bolts.BOLT11.Invoice(10_000, "Hello NLightning, here is 10 sats", paymentHash, paymentSecret);
+        var shortChannelId = new ShortChannelId(6102, 1, 1);
+        var ri = new RoutingInfoCollection
+        {
+            new RoutingInfo(   new PubKey(alice.LocalNodePubKeyBytes),  shortChannelId,   0,  0, 42)
+        };
+        var f = new Features();
+        f.SetFeature(NLightning.Bolts.BOLT9.Feature.VAR_ONION_OPTIN, false, true);
+        f.SetFeature(NLightning.Bolts.BOLT9.Feature.PAYMENT_SECRET, false, true);
+        invoice.Features = f;
+        invoice.RoutingInfos = ri;
+        var paymentRequest = invoice.Encode();
 
+        //Setup interceptor to get virtual nodes stuff 
+        var nodeClone = alice.Clone();
+        var i = new LNDSimpleHtlcInterceptorHandler(nodeClone, async x =>
+        {
+            var onionBlob = x.OnionBlob.ToByteArray();
+            var decoder = new OnionBlob(onionBlob);
+            var sharedSecret = LNTools.DeriveSharedSecret(decoder.EphemeralPublicKey, virtualNodeKey.ToBytes());
+            var hopPeel = decoder.Peel(sharedSecret, null, x.PaymentHash.ToByteArray());
+            Assert.That(paymentSecretHexString.ToLower(), Is.EqualTo(hopPeel.hopPayload.PaymentData.PaymentSecret.ToHex()));
+            //Logic for interception
+            $"Intercepted Payment {Convert.ToHexString(x.PaymentHash.ToByteArray())} on channel {x.IncomingCircuitKey.ChanId} for virtual node {virtualNodeKey.PubKey.ToHex()}"
+                .Print();
+            return new ForwardHtlcInterceptResponse
+            {
+                Action = ResolveHoldForwardAction.Settle,
+                Preimage = ByteString.CopyFrom(Convert.FromHexString(preimageHexString)), //we made invoice use preimage we know to settle
+                IncomingCircuitKey = x.IncomingCircuitKey
+            };
+        });
+        Builder.InterceptorHandlers.Add("alias", i);
+
+        //Pay the thing
+        var p = bob.RouterClient.SendPaymentV2(new SendPaymentRequest()
+        {
+            PaymentRequest = paymentRequest,
+            NoInflightUpdates = true,
+            TimeoutSeconds = 10
+        });
+        await p.ResponseStream.MoveNext(CancellationToken.None);
+        var paymentStatus = p.ResponseStream.Current;
+        //Did it work?
+        Assert.That(paymentStatus.Status, Is.EqualTo(Payment.Types.PaymentStatus.Succeeded));
+        await Task.Delay(2000); //if we don't delay LND shows this as unsettled, it returns true early, with HTLC tracking should verify in prod setup. Otherwise this stuff is phantom 
+
+        var listChannels = await alice.LightningClient.ListChannelsAsync(new ListChannelsRequest()
+        {
+            Peer = ByteString.CopyFrom(bob.LocalNodePubKeyBytes)
+        });
+        Assert.That(listChannels.Channels.Sum(c => c.TotalSatoshisReceived), Is.EqualTo(10));
+
+        //Cleanup
+        Builder.CancelAllInterceptors();
+
+    }
     ///////
     /// ///
     [Test]

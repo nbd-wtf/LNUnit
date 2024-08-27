@@ -6,7 +6,7 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageProjectUrl>https://github.com/rsafier/LNBolt</PackageProjectUrl>
         <PackageId>LNBolt</PackageId>
-        <Version>1.2.1</Version>
+        <Version>1.7.2</Version>
         <Authors>Richard Safier</Authors>
         <PackageDescription>LNBolt - C# BOLT protocol helpers</PackageDescription>
         <RepositoryUrl>https://github.com/rsafier/LNBolt</RepositoryUrl>
@@ -15,9 +15,9 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageReference Include="EndianBinaryIO" Version="1.1.2"/>
-        <PackageReference Include="NBitcoin" Version="7.0.36" />
+        <PackageReference Include="NBitcoin" Version="7.0.37" />
         <PackageReference Include="Portable.BouncyCastle" Version="1.9.0"/>
-        <PackageReference Include="ServiceStack.Text" Version="8.2.2" />
+        <PackageReference Include="ServiceStack.Text" Version="8.3.0" />
         <None Include="README.md" Pack="true" PackagePath="\"/>
     </ItemGroup>
 </Project>
