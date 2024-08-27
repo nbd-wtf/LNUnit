@@ -737,15 +737,14 @@ public abstract class AbcLightningAbstractTests : IDisposable
         $"Failed    : {fail_count}".Print();
         var successful_pps = success_count / (sw.ElapsedMilliseconds / 1000.0);
         $"Successful Payments per second: {successful_pps}".Print();
-
-        //Let us also pull mission control data
-        var mc = await alice.RouterClient.QueryMissionControlAsync(new QueryMissionControlRequest()
-        {
-
-        });
-        var newCount = mc.Pairs.Count;
-        $"{mc_base.Pairs.Count} original, {mc.Pairs.Count} new".Print();
-        mc.Pairs.PrintDump();
+        var size = await Builder.GetFileSize("alice", "/root/.lnd/data/graph/regtest/channel.db");
+        size.PrintDump();
+         size = await Builder.GetFileSize("bob", "/root/.lnd/data/graph/regtest/channel.db");
+        size.PrintDump();
+         size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
+        size.PrintDump();
+        
+        
     }
 
     [Test]

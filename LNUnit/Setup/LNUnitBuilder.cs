@@ -455,7 +455,25 @@ public class LNUnitBuilder : IDisposable
         };
     }
 
+    public async Task<ContainerPathStatResponse?> GetFileSize(string containerId, string filePath)
+    {
+        try
+        {
+            var archResponse = await _dockerClient.Containers.GetArchiveFromContainerAsync(
+                containerId,
+                new GetArchiveFromContainerParameters
+                {
+                    Path = filePath
+                }, true);
+            return archResponse.Stat;
+        }
+        catch (Exception e)
+        {
+        }
 
+        return null;
+
+    }
     private async Task<GetArchiveFromContainerResponse?> GetTarStreamFromFS(string containerId, string filePath)
     {
         var foundFile = false;
