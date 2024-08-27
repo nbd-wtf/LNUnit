@@ -927,7 +927,7 @@ public static class LNUnitBuilderExtensions
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
         bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null,
-        string lndRoot = "/home/lnd/.lnd", bool lndkSupport = false, bool nativeSql = false)
+        string lndRoot = "/home/lnd/.lnd", bool lndkSupport = false, bool nativeSql = false, bool storeFinalHtlcResolutions = false)
     {
         var cmd = new List<string>
         {
@@ -967,6 +967,10 @@ public static class LNUnitBuilderExtensions
             cmd.Add("--protocol.custom-init=39");
         }
 
+        if (storeFinalHtlcResolutions)
+        {
+            cmd.Add("--store-final-htlc-resolutions");
+        }
         if (!postgresDSN.IsEmpty())
         {
             cmd.Add("--db.backend=postgres");

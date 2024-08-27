@@ -146,7 +146,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport: false, nativeSql: _dbType == "postgres");
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport: false, nativeSql: _dbType == "postgres", storeFinalHtlcResolutions: true);
 
         Builder.AddPolarLNDNode("bob",
             [
@@ -269,6 +269,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         //Setup interceptor to get virtual nodes stuff 
         var nodeClone = alice.Clone();
+        CircuitKey? htlcToCheckIfSettled = null;
+        
         var i = new LNDSimpleHtlcInterceptorHandler(nodeClone, async x =>
         {
             var onionBlob = x.OnionBlob.ToByteArray();
@@ -279,6 +281,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
             //Logic for interception
             $"Intercepted Payment {Convert.ToHexString(x.PaymentHash.ToByteArray())} on channel {x.IncomingCircuitKey.ChanId} for virtual node {virtualNodeKey.PubKey.ToHex()}"
                 .Print();
+            htlcToCheckIfSettled = x.IncomingCircuitKey;
             return new ForwardHtlcInterceptResponse
             {
                 Action = ResolveHoldForwardAction.Settle,
@@ -301,6 +304,26 @@ public abstract class AbcLightningAbstractTests : IDisposable
         Assert.That(paymentStatus.Status, Is.EqualTo(Payment.Types.PaymentStatus.Succeeded));
         await Task.Delay(2000); //if we don't delay LND shows this as unsettled, it returns true early, with HTLC tracking should verify in prod setup. Otherwise this stuff is phantom 
 
+        //Check HTLCs
+           
+                try
+                {
+                    var result = await alice.LightningClient.LookupHtlcResolutionAsync(new LookupHtlcResolutionRequest()
+                    {
+                        ChanId = htlcToCheckIfSettled!.ChanId,
+                        HtlcIndex = htlcToCheckIfSettled!.HtlcId
+                    });
+                    result.PrintDump();
+                    Assert.That(result.Settled, Is.True);
+                }
+                catch (RpcException e) when( e.Status.StatusCode == StatusCode.NotFound)
+                {
+                    //isn't resolved yet
+                }
+            
+            
+        
+        
         var listChannels = await alice.LightningClient.ListChannelsAsync(new ListChannelsRequest()
         {
             Peer = ByteString.CopyFrom(bob.LocalNodePubKeyBytes)
