@@ -72,6 +72,25 @@ public class PostgresInstanceFixture
             $"postgresql://superuser:superuser@{_ip}:5432/{dbName}?sslmode=disable");
     }
 
+    public async Task<ulong> GetTableSizeAsync(string tableName)
+    {
+        using (NpgsqlConnection connection = new(DbConnectionStringDotNet))
+        {
+            connection.Open();
+            var query = @$"
+            SELECT pg_table_size('""{tableName}""');
+        ";
+            using var command = new NpgsqlCommand(query,
+                connection);
+
+
+
+            object result = command.ExecuteScalar();
+            return (ulong)result;
+
+        }
+    }
+
     private async Task StartPostgres(
         string image = "postgres",
         string tag = "16.2-alpine",

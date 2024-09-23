@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
 using LNBolt.BOLT11;
 using NUnit.Framework;
 using org.ldk.structs;
+using ServiceStack;
+using ServiceStack.Text;
 
 namespace LNBolt.Tests;
 
@@ -12,6 +15,7 @@ public class Bech32Tests
     [Test]
     public async Task ldk()
     {
+        var sw = Stopwatch.StartNew();
         for (var i = 0; i < 10000; i++)
         {
             var bolt11 = Bolt11Invoice.from_str(
@@ -29,6 +33,24 @@ public class Bech32Tests
             Assert.AreEqual(Convert.ToHexString(y), "0687B0469281CE20D1AC70D85DD6855CECA1726E9525DF81643039FBBFF4427F");
             //Console.WriteLine($"{i}");
         }
+        $"{10000.0 / sw.Elapsed.TotalSeconds} decodes/sec".Print();
+
+    }
+
+    [Test]
+    public async Task csharp()
+    {
+        var sw = Stopwatch.StartNew();
+        var invoice =
+            "lnbc100p1psj9jhxdqud3jxktt5w46x7unfv9kz6mn0v3jsnp4q0d3p2sfluzdx45tqcsh2pu5qc7lgq0xs578ngs6s0s68ua4h7cvspp5q6rmq35js88zp5dvwrv9m459tnk2zunwj5jalqtyxqulh0l5gflssp5nf55ny5gcrfl30xuhzj3nphgj27rstekmr9fw3ny5989s300gyus9qyysgqcqpcrzjqw2sxwe993h5pcm4dxzpvttgza8zhkqxpgffcrf5v25nwpr3cmfg7z54kuqq8rgqqqqqqqq2qqqqq9qq9qrzjqd0ylaqclj9424x9m8h2vcukcgnm6s56xfgu3j78zyqzhgs4hlpzvznlugqq9vsqqqqqqqlgqqqqqeqq9qrzjqwldmj9dha74df76zhx6l9we0vjdquygcdt3kssupehe64g6yyp5yz5rhuqqwccqqyqqqqlgqqqqjcqq9qrzjqf9e58aguqr0rcun0ajlvmzq3ek63cw2w282gv3z5uupmuwvgjtq2z55qsqqg6qqqyqqqrtnqqqzq3cqygrzjqvphmsywntrrhqjcraumvc4y6r8v4z5v593trte429v4hredj7ms5z52usqq9ngqqqqqqqlgqqqqqqgq9qrzjq2v0vp62g49p7569ev48cmulecsxe59lvaw3wlxm7r982zxa9zzj7z5l0cqqxusqqyqqqqlgqqqqqzsqygarl9fh38s0gyuxjjgux34w75dnc6xp2l35j7es3jd4ugt3lu0xzre26yg5m7ke54n2d5sym4xcmxtl8238xxvw5h5h5j5r6drg6k6zcqj0fcwg";
+        for (var i = 0; i < 10000; i++)
+        {
+            var bolt11 = NLightning.Bolt11.Invoice.Decode(invoice);
+            Assert.AreEqual("7F42F4BFFB39306481DF25956E72A1EC5C85D65DD870ACD120CE819246B08706", Convert.ToHexString(bolt11.PaymentHash.ToBytes()));
+            //Console.WriteLine($"{i}");
+        }
+
+        $"{10000.0 / sw.Elapsed.TotalSeconds} decodes/sec".Print();
     }
 
     [Test]

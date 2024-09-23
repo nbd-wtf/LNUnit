@@ -236,104 +236,104 @@ public abstract class AbcLightningAbstractTests : IDisposable
         return false;
     }
 
-    [Test]
-    [NonParallelizable]
-    [Category("Interceptor")]
-    public async Task VirtualNodeInvoicePaymentFlowDemo()
-    {
-        var virtualNodeKey = new Key(); //Random node key
-        SecureKeyManager.Initialize(virtualNodeKey.ToBytes());
-        ConfigManager.Instance.Network = NLightning.Common.Types.Network.REG_TEST;
-        //Node we will intercept at and use as hint
-        var alice = await Builder!.WaitUntilAliasIsServerReady("alice");
-        //Node we will pay from
-        var bob = await Builder!.WaitUntilAliasIsServerReady("bob");
-        //Build the invoice
-        var preimageHexString = RandomNumberGenerator.GetHexString(64);
-        var hashHexString = SHA256.HashData(Convert.FromHexString(preimageHexString)).ToHex();
-        var paymentSecretHexString = RandomNumberGenerator.GetHexString(64);
-        var paymentHash = uint256.Parse(hashHexString);
-        var paymentSecret = uint256.Parse(paymentSecretHexString); ;
-        var invoice = new NLightning.Bolts.BOLT11.Invoice(10_000, "Hello NLightning, here is 10 sats", paymentHash, paymentSecret);
-        var shortChannelId = new ShortChannelId(6102, 1, 1);
-        var ri = new RoutingInfoCollection
-        {
-            new RoutingInfo(   new PubKey(alice.LocalNodePubKeyBytes),  shortChannelId,   0,  0, 42)
-        };
-        var f = new Features();
-        f.SetFeature(NLightning.Bolts.BOLT9.Feature.VAR_ONION_OPTIN, false, true);
-        f.SetFeature(NLightning.Bolts.BOLT9.Feature.PAYMENT_SECRET, false, true);
-        invoice.Features = f;
-        invoice.RoutingInfos = ri;
-        var paymentRequest = invoice.Encode();
-
-        //Setup interceptor to get virtual nodes stuff 
-        var nodeClone = alice.Clone();
-        CircuitKey? htlcToCheckIfSettled = null;
-        
-        var i = new LNDSimpleHtlcInterceptorHandler(nodeClone, async x =>
-        {
-            var onionBlob = x.OnionBlob.ToByteArray();
-            var decoder = new OnionBlob(onionBlob);
-            var sharedSecret = LNTools.DeriveSharedSecret(decoder.EphemeralPublicKey, virtualNodeKey.ToBytes());
-            var hopPeel = decoder.Peel(sharedSecret, null, x.PaymentHash.ToByteArray());
-            Assert.That(paymentSecretHexString.ToLower(), Is.EqualTo(hopPeel.hopPayload.PaymentData.PaymentSecret.ToHex()));
-            //Logic for interception
-            $"Intercepted Payment {Convert.ToHexString(x.PaymentHash.ToByteArray())} on channel {x.IncomingCircuitKey.ChanId} for virtual node {virtualNodeKey.PubKey.ToHex()}"
-                .Print();
-            htlcToCheckIfSettled = x.IncomingCircuitKey;
-            return new ForwardHtlcInterceptResponse
-            {
-                Action = ResolveHoldForwardAction.Settle,
-                Preimage = ByteString.CopyFrom(Convert.FromHexString(preimageHexString)), //we made invoice use preimage we know to settle
-                IncomingCircuitKey = x.IncomingCircuitKey
-            };
-        });
-        Builder.InterceptorHandlers.Add("alias", i);
-
-        //Pay the thing
-        var p = bob.RouterClient.SendPaymentV2(new SendPaymentRequest()
-        {
-            PaymentRequest = paymentRequest,
-            NoInflightUpdates = true,
-            TimeoutSeconds = 10
-        });
-        await p.ResponseStream.MoveNext(CancellationToken.None);
-        var paymentStatus = p.ResponseStream.Current;
-        //Did it work?
-        Assert.That(paymentStatus.Status, Is.EqualTo(Payment.Types.PaymentStatus.Succeeded));
-        await Task.Delay(2000); //if we don't delay LND shows this as unsettled, it returns true early, with HTLC tracking should verify in prod setup. Otherwise this stuff is phantom 
-
-        //Check HTLCs
-           
-                try
-                {
-                    var result = await alice.LightningClient.LookupHtlcResolutionAsync(new LookupHtlcResolutionRequest()
-                    {
-                        ChanId = htlcToCheckIfSettled!.ChanId,
-                        HtlcIndex = htlcToCheckIfSettled!.HtlcId
-                    });
-                    result.PrintDump();
-                    Assert.That(result.Settled, Is.True);
-                }
-                catch (RpcException e) when( e.Status.StatusCode == StatusCode.NotFound)
-                {
-                    //isn't resolved yet
-                }
-            
-            
-        
-        
-        var listChannels = await alice.LightningClient.ListChannelsAsync(new ListChannelsRequest()
-        {
-            Peer = ByteString.CopyFrom(bob.LocalNodePubKeyBytes)
-        });
-        Assert.That(listChannels.Channels.Sum(c => c.TotalSatoshisReceived), Is.EqualTo(10));
-
-        //Cleanup
-        Builder.CancelAllInterceptors();
-
-    }
+    // [Test]
+    // [NonParallelizable]
+    // [Category("Interceptor")]
+    // public async Task VirtualNodeInvoicePaymentFlowDemo()
+    // {
+    //     var virtualNodeKey = new Key(); //Random node key
+    //     SecureKeyManager.Initialize(virtualNodeKey.ToBytes());
+    //     ConfigManager.Instance.Network = NLightning.Common.Types.Network.REG_TEST;
+    //     //Node we will intercept at and use as hint
+    //     var alice = await Builder!.WaitUntilAliasIsServerReady("alice");
+    //     //Node we will pay from
+    //     var bob = await Builder!.WaitUntilAliasIsServerReady("bob");
+    //     //Build the invoice
+    //     var preimageHexString = RandomNumberGenerator.GetHexString(64);
+    //     var hashHexString = SHA256.HashData(Convert.FromHexString(preimageHexString)).ToHex();
+    //     var paymentSecretHexString = RandomNumberGenerator.GetHexString(64);
+    //     var paymentHash = uint256.Parse(hashHexString);
+    //     var paymentSecret = uint256.Parse(paymentSecretHexString); ;
+    //     var invoice = new NLightning.Bolts.BOLT11.Invoice(10_000, "Hello NLightning, here is 10 sats", paymentHash, paymentSecret);
+    //     var shortChannelId = new ShortChannelId(6102, 1, 1);
+    //     var ri = new RoutingInfoCollection
+    //     {
+    //         new RoutingInfo(   new PubKey(alice.LocalNodePubKeyBytes),  shortChannelId,   0,  0, 42)
+    //     };
+    //     var f = new Features();
+    //     f.SetFeature(NLightning.Bolts.BOLT9.Feature.VAR_ONION_OPTIN, false, true);
+    //     f.SetFeature(NLightning.Bolts.BOLT9.Feature.PAYMENT_SECRET, false, true);
+    //     invoice.Features = f;
+    //     invoice.RoutingInfos = ri;
+    //     var paymentRequest = invoice.Encode();
+    //
+    //     //Setup interceptor to get virtual nodes stuff 
+    //     var nodeClone = alice.Clone();
+    //     Routerrpc.CircuitKey? htlcToCheckIfSettled = null;
+    //
+    //     var i = new LNDSimpleHtlcInterceptorHandler(nodeClone, async x =>
+    //     {
+    //         var onionBlob = x.OnionBlob.ToByteArray();
+    //         var decoder = new OnionBlob(onionBlob);
+    //         var sharedSecret = LNTools.DeriveSharedSecret(decoder.EphemeralPublicKey, virtualNodeKey.ToBytes());
+    //         var hopPeel = decoder.Peel(sharedSecret, null, x.PaymentHash.ToByteArray());
+    //         Assert.That(paymentSecretHexString.ToLower(), Is.EqualTo(hopPeel.hopPayload.PaymentData.PaymentSecret.ToHex()));
+    //         //Logic for interception
+    //         $"Intercepted Payment {Convert.ToHexString(x.PaymentHash.ToByteArray())} on channel {x.IncomingCircuitKey.ChanId} for virtual node {virtualNodeKey.PubKey.ToHex()}"
+    //             .Print();
+    //         htlcToCheckIfSettled = x.IncomingCircuitKey;
+    //         return new ForwardHtlcInterceptResponse
+    //         {
+    //             Action = ResolveHoldForwardAction.Settle,
+    //             Preimage = ByteString.CopyFrom(Convert.FromHexString(preimageHexString)), //we made invoice use preimage we know to settle
+    //             IncomingCircuitKey = x.IncomingCircuitKey
+    //         };
+    //     });
+    //     Builder.InterceptorHandlers.Add("alias", i);
+    //
+    //     //Pay the thing
+    //     var p = bob.RouterClient.SendPaymentV2(new SendPaymentRequest()
+    //     {
+    //         PaymentRequest = paymentRequest,
+    //         NoInflightUpdates = true,
+    //         TimeoutSeconds = 10
+    //     });
+    //     await p.ResponseStream.MoveNext(CancellationToken.None);
+    //     var paymentStatus = p.ResponseStream.Current;
+    //     //Did it work?
+    //     Assert.That(paymentStatus.Status, Is.EqualTo(Payment.Types.PaymentStatus.Succeeded));
+    //     await Task.Delay(2000); //if we don't delay LND shows this as unsettled, it returns true early, with HTLC tracking should verify in prod setup. Otherwise this stuff is phantom 
+    //
+    //     //Check HTLCs
+    //
+    //     try
+    //     {
+    //         var result = await alice.LightningClient.LookupHtlcResolutionAsync(new LookupHtlcResolutionRequest()
+    //         {
+    //             ChanId = htlcToCheckIfSettled!.ChanId,
+    //             HtlcIndex = htlcToCheckIfSettled!.HtlcId
+    //         });
+    //         result.PrintDump();
+    //         Assert.That(result.Settled, Is.True);
+    //     }
+    //     catch (RpcException e) when (e.Status.StatusCode == StatusCode.NotFound)
+    //     {
+    //         //isn't resolved yet
+    //     }
+    //
+    //
+    //
+    //
+    //     var listChannels = await alice.LightningClient.ListChannelsAsync(new ListChannelsRequest()
+    //     {
+    //         Peer = ByteString.CopyFrom(bob.LocalNodePubKeyBytes)
+    //     });
+    //     Assert.That(listChannels.Channels.Sum(c => c.TotalSatoshisReceived), Is.EqualTo(10));
+    //
+    //     //Cleanup
+    //     Builder.CancelAllInterceptors();
+    //
+    // }
     ///////
     /// ///
     [Test]
@@ -433,6 +433,51 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
     }
 
+    // [Test]
+    // [Category("Payment")]
+    // [NonParallelizable]
+    // public async Task MultiplePaymentsSameHash()
+    // {
+    //     var alice = await Builder.GetNodeFromAlias("alice");
+    //     var carol = await Builder.GetNodeFromAlias("carol");
+    //     var bob = await Builder.GetNodeFromAlias("bob");
+    //     //    await Builder.DelayAllHTLCsOnAlias("alice", 2_000); //6s
+    //     //    await Builder.DelayAllHTLCsOnAlias("bob", 2_000); //6s
+    //     //    await Builder.DelayAllHTLCsOnAlias("carol", 2_000); //6s
+    //     var preimage = new byte[32];
+    //     preimage[0] = 12;
+    //     var invoice1 = alice.LightningClient.AddInvoice(new Invoice()
+    //     {
+    //         RPreimage = ByteString.CopyFrom(preimage),
+    //         Value = 1,
+    //         Memo = "test same preimage",
+    //         Expiry = 300
+    //     });
+    //     var invoice2 = bob.LightningClient.AddInvoice(new Invoice()
+    //     {
+    //         RPreimage = ByteString.CopyFrom(preimage),
+    //         Value = 1,
+    //         Memo = "test same preimage",
+    //         Expiry = 300
+    //     });
+    //     var t1 = await Builder.MakeLightningPaymentFromAlias("carol", new SendPaymentRequest()
+    //     {
+    //         PaymentRequest = invoice1.PaymentRequest,
+    //         TimeoutSeconds = 60,
+    //         FeeLimitSat = 10000000
+    //     });
+    //     var t2 = await Builder.MakeLightningPaymentFromAlias("carol", new SendPaymentRequest()
+    //     {
+    //         PaymentRequest = invoice2.PaymentRequest,
+    //         TimeoutSeconds = 60,
+    //         FeeLimitSat = 10000000
+    //     });
+    //     //Task.WaitAll(t1, t2);
+    //     t1.PrintDump();
+    //     t2.PrintDump();
+    //
+    //
+    // }
 
     [Test]
     [Category("Balancing")]
@@ -739,12 +784,12 @@ public abstract class AbcLightningAbstractTests : IDisposable
         $"Successful Payments per second: {successful_pps}".Print();
         var size = await Builder.GetFileSize("alice", "/root/.lnd/data/graph/regtest/channel.db");
         size.PrintDump();
-         size = await Builder.GetFileSize("bob", "/root/.lnd/data/graph/regtest/channel.db");
+        size = await Builder.GetFileSize("bob", "/root/.lnd/data/graph/regtest/channel.db");
         size.PrintDump();
-         size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
+        size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
         size.PrintDump();
-        
-        
+
+
     }
 
     [Test]

@@ -219,14 +219,14 @@ public class LNDNodePool : IDisposable
     ///     peers, so 0 fees.
     /// </summary>
     /// <param name="pool"></param>
-    public async Task<PoolRebalanceStats> RebalanceNodePool()
+    public async Task<PoolRebalanceStats> RebalanceNodePool(int deltaThreshold = 100_000)
     {
         _logger?.LogDebug("RebalanceNodePool Start");
 
         //Get all channels across pool
         //Filter for all cross-links
         //select origin from all with >50% balance
-        var rebalanceTasks = await GetInteralNodeEvenBalaceTasks(this);
+        var rebalanceTasks = await GetInteralNodeEvenBalaceTasks(this, deltaThreshold);
         var stats = new PoolRebalanceStats();
         foreach (var t in rebalanceTasks)
         {
