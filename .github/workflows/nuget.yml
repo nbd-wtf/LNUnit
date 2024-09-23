@@ -31,11 +31,11 @@ jobs:
         dotnet pack /p:Version=$GITHUB_REF_NAME --configuration Release
         package=$(ls bin/Release/LNUnit.LND.*.nupkg)
         dotnet nuget push $package --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-    - name: Pack and Push NuGet Package LNBolt
-      run: |
-        cd LNBolt
-        dotnet pack /p:Version=$GITHUB_REF_NAME --configuration Release
-        package=$(ls bin/Release/LNBolt.*.nupkg)
-        dotnet nuget push $package --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        
-        
+#    - name: Pack and Push NuGet Package LNBolt
+#      run: |
+#        cd LNBolt
+#        dotnet pack /p:Version=$GITHUB_REF_NAME --configuration Release
+#        package=$(ls bin/Release/LNBolt.*.nupkg)
+#        dotnet nuget push $package --api-key ${{ secrets.NUGET }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+#        
+#        
