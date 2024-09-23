@@ -6,7 +6,7 @@
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageProjectUrl>https://github.com/rsafier/LNBolt</PackageProjectUrl>
         <PackageId>LNBolt</PackageId>
-        <Version>1.7.2</Version>
+        <Version>1.7.5</Version>
         <Authors>Richard Safier</Authors>
         <PackageDescription>LNBolt - C# BOLT protocol helpers</PackageDescription>
         <RepositoryUrl>https://github.com/rsafier/LNBolt</RepositoryUrl>
