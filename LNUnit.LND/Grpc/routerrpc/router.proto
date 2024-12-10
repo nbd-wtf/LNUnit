@@ -1063,6 +1063,10 @@ message ForwardHtlcInterceptResponse {
     // Any custom records that should be set on the p2p wire message message of
     // the resumed HTLC. This field is ignored if the action is not
     // RESUME_MODIFIED.
+    //
+    // This map will merge with the existing set of custom records (if any),
+    // replacing any conflicting types. Note that there currently is no support
+    // for deleting existing custom records (they can only be replaced).
     map<uint64, bytes> out_wire_custom_records = 8;
 }
 
