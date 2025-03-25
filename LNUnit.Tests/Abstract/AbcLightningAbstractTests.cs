@@ -80,7 +80,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         }
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/28.1", ["bitcoin:latest", "bitcoin:28.1"]);
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/29.0", ["bitcoin:latest", "bitcoin:29.0"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
@@ -110,7 +110,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
 
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
-        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "28.1",
+        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "29.0",
          bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
@@ -190,16 +190,16 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         await Builder.Build(lndRoot: lndRoot);
 
-        WaitNodesReady();
+        await WaitNodesReady();
         await WaitGraphReady();
     }
 
-    private void WaitNodesReady()
+    private async Task WaitNodesReady()
     {
-        var a = Builder.WaitUntilAliasIsServerReady("alice");
-        var b = Builder.WaitUntilAliasIsServerReady("bob");
-        var c = Builder.WaitUntilAliasIsServerReady("carol");
-        Task.WaitAll(a, b, c);
+        var a = await Builder.WaitUntilAliasIsServerReady("alice");
+        var b = await Builder.WaitUntilAliasIsServerReady("bob");
+        var c = await Builder.WaitUntilAliasIsServerReady("carol");
+        //Task.WaitAll(a, b, c);
     }
 
     private async Task WaitGraphReady(string fromAlias = "alice")
