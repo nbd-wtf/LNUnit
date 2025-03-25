@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <Version>1.7.7</Version>
+        <Version>1.7.8</Version>
         <IsPackable>true</IsPackable>
         <PackageId>LNUnit</PackageId>
         <PackageDescription>Lightning Network Unit Testing Framework</PackageDescription>
@@ -13,8 +13,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="NBitcoin" Version="7.0.37" />
-        <PackageReference Include="ServiceStack" Version="8.3.0" />
+        <PackageReference Include="NBitcoin" Version="8.0.4" />
+        <PackageReference Include="ServiceStack" Version="8.6.0" />
         <PackageReference Include="SharpCompress" Version="0.37.2" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.3" />
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>

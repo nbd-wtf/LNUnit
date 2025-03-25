@@ -274,12 +274,14 @@ service Lightning {
     }
 
     /*
-    SendPaymentSync is the synchronous non-streaming version of SendPayment.
-    This RPC is intended to be consumed by clients of the REST proxy.
-    Additionally, this RPC expects the destination's public key and the payment
-    hash (if any) to be encoded as hex strings.
+    Deprecated, use routerrpc.SendPaymentV2. SendPaymentSync is the synchronous
+    non-streaming version of SendPayment. This RPC is intended to be consumed by
+    clients of the REST proxy. Additionally, this RPC expects the destination's
+    public key and the payment hash (if any) to be encoded as hex strings.
     */
-    rpc SendPaymentSync (SendRequest) returns (SendResponse);
+    rpc SendPaymentSync (SendRequest) returns (SendResponse) {
+        option deprecated = true;
+    }
 
     /* lncli: `sendtoroute`
     Deprecated, use routerrpc.SendToRouteV2. SendToRoute is a bi-directional
@@ -293,10 +295,13 @@ service Lightning {
     }
 
     /*
-    SendToRouteSync is a synchronous version of SendToRoute. It Will block
-    until the payment either fails or succeeds.
+    Deprecated, use routerrpc.SendToRouteV2. SendToRouteSync is a synchronous
+    version of SendToRoute. It Will block until the payment either fails or
+    succeeds.
     */
-    rpc SendToRouteSync (SendToRouteRequest) returns (SendResponse);
+    rpc SendToRouteSync (SendToRouteRequest) returns (SendResponse) {
+        option deprecated = true;
+    }
 
     /* lncli: `addinvoice`
     AddInvoice attempts to add a new invoice to the invoice database. Any
@@ -1376,6 +1381,13 @@ message HTLC {
 
     // Index identifying the htlc on the forwarding channel.
     uint64 forwarding_htlc_index = 7;
+
+    /*
+    Whether the HTLC is locked in. An HTLC is considered locked in when the
+    remote party has sent us the `revoke_and_ack` to irrevocably commit this
+    HTLC.
+    */
+    bool locked_in = 8;
 }
 
 enum CommitmentType {
@@ -1996,8 +2008,8 @@ message GetInfoResponse {
     bool synced_to_graph = 18;
 
     /*
-    Whether the current node is connected to testnet. This field is
-    deprecated and the network field should be used instead
+    Whether the current node is connected to testnet or testnet4. This field is
+    deprecated and the network field should be used instead.
     */
     bool testnet = 10 [deprecated = true];
 
@@ -2141,9 +2153,13 @@ message CloseChannelRequest {
     // NOTE: This field is only respected if we're the initiator of the channel.
     uint64 max_fee_per_vbyte = 7;
 
-    // If true, then the rpc call will not block while it awaits a closing txid.
-    // Consequently this RPC call will not return a closing txid if this value
-    // is set.
+    // If true, then the rpc call will not block while it awaits a closing txid
+    // to be broadcasted to the mempool. To obtain the closing tx one has to
+    // listen to the stream for the particular updates. Moreover if a coop close
+    // is specified and this flag is set to true the coop closing flow will be
+    // initiated even if HTLCs are active on the channel. The channel will wait
+    // until all HTLCs are resolved and then start the coop closing process. The
+    // channel will be disabled in the meantime and will disallow any new HTLCs.
     bool no_wait = 8;
 }
 
@@ -2158,9 +2174,15 @@ message CloseStatusUpdate {
 message PendingUpdate {
     bytes txid = 1;
     uint32 output_index = 2;
+    int64 fee_per_vbyte = 3;
+    bool local_close_tx = 4;
 }
 
 message InstantUpdate {
+    // The number of pending HTLCs that are currently active on the channel.
+    // These HTLCs need to be resolved before the channel can be closed
+    // cooperatively.
+    int32 num_pending_htlcs = 1;
 }
 
 message ReadyForPsbtFunding {

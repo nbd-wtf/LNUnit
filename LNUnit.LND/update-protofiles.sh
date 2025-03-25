@@ -1,4 +1,21 @@
  #! /bin/bash
+mkdir -p ./Grpc/chainrpc
+mkdir -p ./Grpc/invoicesrpc
+mkdir -p ./Grpc/routerrpc
+mkdir -p ./Grpc/watchtowerrpc
+mkdir -p ./Grpc/wtclientrpc
+mkdir -p ./Grpc/signrpc
+mkdir -p ./Grpc/walletrpc
+mkdir -p ./Grpc/autopilotrpc
+mkdir -p ./Grpc/chainrpc
+mkdir -p ./Grpc/verrpc
+mkdir -p ./Grpc/neutrinorpc
+mkdir -p ./Grpc/devrpc
+mkdir -p ./Grpc/peersrpc
+mkdir -p ./Grpc/looprpc
+mkdir -p ./Grpc/swapserverrpc
+
+
 wget -O ./Grpc/lightning.proto https://raw.githubusercontent.com/lightningnetwork/lnd/master/lnrpc/lightning.proto
 wget -O ./Grpc/walletunlocker.proto https://raw.githubusercontent.com/lightningnetwork/lnd/master/lnrpc/walletunlocker.proto
 wget -O ./Grpc/chainrpc/chainnotifier.proto https://raw.githubusercontent.com/lightningnetwork/lnd/master/lnrpc/chainrpc/chainnotifier.proto

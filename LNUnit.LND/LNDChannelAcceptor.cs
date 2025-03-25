@@ -1,5 +1,4 @@
 using Lnrpc;
-
 namespace LNUnit.LND;
 
 /// <summary>

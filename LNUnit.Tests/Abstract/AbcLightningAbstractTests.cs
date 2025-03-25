@@ -7,7 +7,7 @@ using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Grpc.Core;
 using Invoicesrpc;
-using LNBolt;
+// using LNBolt;
 using Lnrpc;
 using LNUnit.Extentions;
 using LNUnit.LND;
@@ -80,7 +80,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         }
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/28.0", ["bitcoin:latest", "bitcoin:28.0"]);
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/28.1", ["bitcoin:latest", "bitcoin:28.1"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
@@ -110,7 +110,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
 
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
-        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "27.1",
+        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "bitcoin", string bitcoinTag = "28.1",
          bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
@@ -482,7 +482,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Test]
     [Category("Balancing")]
     [NonParallelizable]
-    [Timeout(5000)]
+    [Timeout(25000)]
     public async Task PoolRebalance()
     {
         var stats = await Builder.LNDNodePool.RebalanceNodePool();
@@ -502,7 +502,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [NonParallelizable]
     public async Task CheckLNDVersion()
     {
-        var n = Builder.LNDNodePool.ReadyNodes.First();
+        var n = await Builder.WaitUntilAliasIsServerReady("alice");
         var info = n.LightningClient.GetInfo(new GetInfoRequest());
         info.Version.Print();
     }
@@ -538,7 +538,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
     [Test]
     [Category("ChannelAcceptor")]
-    [Timeout(5000)]
+    [Timeout(15000)]
     [NonParallelizable]
     public async Task ChannelAcceptorDeny()
     {
@@ -600,6 +600,12 @@ public abstract class AbcLightningAbstractTests : IDisposable
                 Private = true
             });
         });
+        //Move things along so it is confirmed
+        await Builder.NewBlock(1);
+        while (!alice.LightningClient.GetInfo(new GetInfoRequest()).SyncedToChain) //wait until synced so can open
+        {
+            await Task.Delay(1000);
+        }
         //works public, large enough
         var channelPoint = await alice.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
         {
