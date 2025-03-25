@@ -18,7 +18,7 @@ ARG BITCOIN_VERSION=v29.0rc2
 ENV PATH=/opt/bitcoin-${BITCOIN_VERSION}:$PATH
 
 RUN apt-get update -y \
-  && apt-get install -y libevent-pthreads-2.1-7 curl gosu libgcc-s1 libstdc++6 libevent-extra-2.1-7 libevent-core-2.1-7 libevent-2.1-7 libboost-system1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0  libzmq3  libsqlite3-0 \
+  && apt-get install -y libevent-pthreads-2.1-7 curl gosu libgcc-s1 libstdc++6 libevent-extra-2.1-7 libevent-core-2.1-7 libevent-2.1-7 libboost-system1.74.0 libboost-filesystem1.74.0 libboost-thread1.74.0  libzmq5  libsqlite3-0 \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*  
 #copy from build
