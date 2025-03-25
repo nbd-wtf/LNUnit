@@ -2,6 +2,7 @@
 
 namespace LNUnit.Tests.Fixture;
 
+[Ignore("only local")]
 //[TestFixture("postgres", "lightninglabs/lnd", "v0.18.3-beta", "/root/.lnd", true)]
 [TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
 public class AbcLightningAbstractTestsPostgres : LNUnit.Tests.Abstract.AbcLightningAbstractTests
