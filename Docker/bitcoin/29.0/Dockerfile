@@ -8,7 +8,7 @@ WORKDIR /
 RUN git clone https://github.com/bitcoin/bitcoin.git
 #build 
 WORKDIR /bitcoin  
-RUN git checkout v29.0rc2 && \
+RUN git checkout v29.0rc3 && \
     cmake -B build -DSECP256K1_ENABLE_MODULE_MUSIG=ON -DWITH_ZMQ=ON -DBUILD_TESTS=OFF -DCMAKE_CXX_FLAGS="--param ggc-min-expand=1 --param ggc-min-heapsize=32768" && \
     cmake --build build -j 4
  

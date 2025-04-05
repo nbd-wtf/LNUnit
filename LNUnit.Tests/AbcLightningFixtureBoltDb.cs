@@ -17,7 +17,7 @@ using Feature = ServiceStack.Feature;
 
 namespace LNUnit.Tests;
 
-// [Ignore("only local")]
+[Ignore("only local")]
 [TestFixture("boltdb", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
 // [TestFixture("boltdb", "lightninglabs/lnd", "v0.17.5-beta", "/root/.lnd", false)]
 public class AbcLightningAbstractTestsBoltDb : LNUnit.Tests.Abstract.AbcLightningAbstractTests

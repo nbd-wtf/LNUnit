@@ -967,8 +967,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             ValueMsat = 1003
         });
         //Apply HTLC hold to prevent payment from settling 
-        await Builder.DelayAllHTLCsOnAlias("bob", 30_000); //6s
-        await Builder.DelayAllHTLCsOnAlias("carol", 15_000); //6s
+        await Builder.DelayAllHTLCsOnAlias("bob", 30_000);
+        await Builder.DelayAllHTLCsOnAlias("carol", 15_000);
         Payment? payment = null;
         var failed = false;
 

@@ -110,8 +110,8 @@ public class PostgresInstanceFixture
             Hostname = $"{DbContainerName}",
             Env =
             [
-                $"POSTGRES_PASSWORD={username}",
-                $"POSTGRES_USER={password}",
+                $"POSTGRES_PASSWORD={password}",
+                $"POSTGRES_USER={username}",
                 "POSTGRES_DB=postgres"
             ]
         });
