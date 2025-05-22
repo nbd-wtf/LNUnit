@@ -1172,6 +1172,12 @@ message PendingSweep {
     The deadline height used for this output when perform fee bumping.
     */
     uint32 deadline_height = 14;
+
+    /*
+    The block height which the input's locktime will expire at. Zero if the
+    input has no locktime.
+    */
+    uint32 maturity_height = 15;
 }
 
 message PendingSweepsRequest {
@@ -1436,6 +1442,16 @@ message FundPsbtRequest {
 
     // The max fee to total output amount ratio that this psbt should adhere to.
     double max_fee_ratio = 12;
+
+    // The custom lock ID to use for the inputs in the funded PSBT. The value
+    // if set must be exactly 32 bytes long. If empty, the default lock ID will
+    // be used.
+    bytes custom_lock_id = 13;
+
+    // If set, then the inputs in the funded PSBT will be locked for the
+    // specified duration. The lock duration is specified in seconds. If not
+    // set, the default lock duration will be used.
+    uint64 lock_expiration_seconds = 14;
 }
 message FundPsbtResponse {
     /*
