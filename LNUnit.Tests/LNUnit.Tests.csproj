@@ -12,12 +12,12 @@
 
     <ItemGroup>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
-        <PackageReference Include="Google.Protobuf" Version="3.31.0" />
+        <PackageReference Include="Google.Protobuf" Version="3.31.1" />
         <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
         <PackageReference Include="JunitXml.TestLogger" Version="3.1.12" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.8" />
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.8" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="8.0.8" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.18" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.7" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="8.0.18" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.0" /> 
         <PackageReference Include="NLightning.Bolt11" Version="3.0.1" />
         <PackageReference Include="Npgsql" Version="8.0.3" />

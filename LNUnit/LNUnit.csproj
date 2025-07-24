@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <Version>1.8.0</Version>
+        <Version>1.8.1</Version>
         <IsPackable>true</IsPackable>
         <PackageId>LNUnit</PackageId>
         <PackageDescription>Lightning Network Unit Testing Framework</PackageDescription>
@@ -13,9 +13,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Google.Protobuf" Version="3.31.0" />
+        <PackageReference Include="Google.Protobuf" Version="3.31.1" />
         <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
-        <PackageReference Include="NBitcoin" Version="8.0.13" />
+        <PackageReference Include="NBitcoin" Version="8.0.18" />
         <PackageReference Include="ServiceStack" Version="8.8.0" />
         <PackageReference Include="SharpCompress" Version="0.39.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.3" />
