@@ -12,18 +12,18 @@
 
     <ItemGroup>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
-        <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+        <PackageReference Include="Google.Protobuf" Version="3.32.0" />
         <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
         <PackageReference Include="JunitXml.TestLogger" Version="3.1.12" />
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.18" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.7" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="8.0.18" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.0" /> 
-        <PackageReference Include="NLightning.Bolt11" Version="3.0.1" />
+        <PackageReference Include="NLightning.Bolt11" Version="4.0.0" />
         <PackageReference Include="Npgsql" Version="8.0.3" />
         <PackageReference Include="NUnit" Version="3.14.0" />
-        <PackageReference Include="NUnit3TestAdapter" Version="4.5.0"/>
-        <PackageReference Include="NUnit.Analyzers" Version="4.1.0">
+        <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+        <PackageReference Include="NUnit.Analyzers" Version="4.10.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
@@ -32,14 +32,14 @@
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
         <PackageReference Include="ServiceStack" Version="8.8.0" />
-        <PackageReference Include="SharpCompress" Version="0.39.0" />
+        <PackageReference Include="SharpCompress" Version="0.40.0" />
 
         <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
         <!--        <PackageReference Include="Serilog.Sinks.AwsCloudWatch" Version="4.0.182"/>-->
         <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
         <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
-        <PackageReference Include="System.Text.Json" Version="9.0.5" />
+        <PackageReference Include="System.Text.Json" Version="9.0.8" />
     </ItemGroup>
 
     <ItemGroup>
