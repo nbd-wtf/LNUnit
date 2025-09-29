@@ -4,7 +4,7 @@
         <TargetFrameworks>net9.0</TargetFrameworks>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <Version>0.2.1</Version>
+        <Version>0.2.2</Version>
         <IsPackable>false</IsPackable>
         <PreserveCompilationContext>true</PreserveCompilationContext>
         <LangVersion>12.0</LangVersion>
@@ -13,12 +13,12 @@
     <ItemGroup>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
         <PackageReference Include="Google.Protobuf" Version="3.27.3" />
-        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.65.0" />
-        <PackageReference Include="Grpc.Net.Client" Version="2.65.0" />
-        <PackageReference Include="Grpc.Net.Common" Version="2.65.0" />
+        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
+        <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
+        <PackageReference Include="Grpc.Net.Common" Version="2.71.0" />
 
         <PackageReference Include="JunitXml.TestLogger" Version="3.1.12" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.18" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.9" />
         <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.9" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="9.0.9" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" /> 
