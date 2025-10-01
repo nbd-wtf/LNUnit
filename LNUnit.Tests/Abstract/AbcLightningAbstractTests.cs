@@ -79,8 +79,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             PostgresFixture.AddDb("carol");
         }
 
-       // await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-       // await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/29.0", ["bitcoin:latest", "bitcoin:29.0"]);
+        // await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
+        // await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/29.0", ["bitcoin:latest", "bitcoin:29.0"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
