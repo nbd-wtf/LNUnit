@@ -976,7 +976,7 @@ public static class LNUnitBuilderExtensions
         if (nativeSql)
         {
             cmd.Add("--db.use-native-sql");
-        
+
         }
         if (lndkSupport) //TODO: must compile LND with 'dev' flags before can play with this
         {
