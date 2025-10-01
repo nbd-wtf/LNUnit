@@ -335,66 +335,72 @@ public abstract class AbcLightningAbstractTests : IDisposable
     //
     // }
 
-    private PSBT CreatePsbtOutputTemplate(int numberOfOutputs, string destinationAddress, long amountPerOutputSats, Network network)
-    { 
-        if (numberOfOutputs <= 0 || amountPerOutputSats <= 0)
-            throw new ArgumentException("Number of outputs and amount per output must be greater than zero.");
-            
-        BitcoinAddress address = BitcoinAddress.Create(destinationAddress, network);
+    // private PSBT CreatePsbtOutputTemplate(int numberOfOutputs, string destinationAddress, long amountPerOutputSats, Network network)
+    // {
+    //     if (numberOfOutputs <= 0 || amountPerOutputSats <= 0)
+    //         throw new ArgumentException("Number of outputs and amount per output must be greater than zero.");
+    //
+    //     BitcoinAddress address = BitcoinAddress.Create(destinationAddress, network);
+    //
+    //     // Create a transaction
+    //     var tx = NBitcoin.Transaction.Create(network);
+    //
+    //     // // Add dummy inputs
+    //     // tx.Inputs.Add(new TxIn(new OutPoint(uint256.Zero, 0)));
+    //
+    //     // Add outputs
+    //     for (int i = 0; i < numberOfOutputs; i++)
+    //     {
+    //         tx.Outputs.Add(new TxOut(Money.Satoshis(amountPerOutputSats), address));
+    //     }
+    //
+    //     // Create PSBT from the transaction
+    //     return PSBT.FromTransaction(tx, network);
+    // }
 
-        // Create a transaction
-        var tx = NBitcoin.Transaction.Create(network);
-
-        // // Add dummy inputs
-        // tx.Inputs.Add(new TxIn(new OutPoint(uint256.Zero, 0)));
-
-        // Add outputs
-        for (int i = 0; i < numberOfOutputs; i++)
-        {
-            tx.Outputs.Add(new TxOut(Money.Satoshis(amountPerOutputSats), address));
-        }
-
-        // Create PSBT from the transaction
-        return PSBT.FromTransaction(tx, network);
-    }
-    
-    [TestCase(2,"bcrt1pau9xpav22lr592a2fgldkqy65e42uz5gdgy8et6kgvkrtep5gkeq07uyla",1000,"regtest")]
-    [Category("PSBT")]
-    public async Task PSBTFlow(int numberOfOutputs, string depositAddress,int  amountPerOutputSats, string network, ulong feeRate=1)
+    private async Task<string> CreatePsbtOutputTemplateBitcoinRPC(int numberOfOutputs, string destinationAddress, long amountPerOutputSats, Network network)
     {
-        var n = Network.GetNetwork(network);
-        var p = CreatePsbtOutputTemplate(numberOfOutputs, depositAddress, amountPerOutputSats, n); 
+        return await Builder.BitcoinRpcClient.CreateMultiOutputPsbt(destinationAddress, amountPerOutputSats,
+            numberOfOutputs);
+    }
+
+    [TestCase(2, "bcrt1pau9xpav22lr592a2fgldkqy65e42uz5gdgy8et6kgvkrtep5gkeq07uyla", 1000, "regtest")]
+    [Category("PSBT")]
+    public async Task PSBTFlow(int numberOfOutputs, string depositAddress, int amountPerOutputSats, string network, ulong feeRate = 1)
+    {
+        var networkChain = Network.GetNetwork(network);
+        var psbtOutputTemplate = await CreatePsbtOutputTemplateBitcoinRPC(numberOfOutputs, depositAddress, amountPerOutputSats, networkChain);
         //This verifies is fundable, and leases outputs.
         var fundReq = new FundPsbtRequest()
         {
-            Psbt = ByteString.FromBase64(p.ToBase64())
+            Psbt = ByteString.FromBase64(psbtOutputTemplate)
         };
 
         fundReq.SatPerVbyte = feeRate;
-        var node =  Builder.LNDNodePool.GetLNDNodeConnection();
+        var node = Builder.LNDNodePool.GetLNDNodeConnection();
 
         var fundedPsbt = node.WalletKitClient.FundPsbt(fundReq);
-       
+
         //extract txId
-        var psbt = PSBT.Parse(fundedPsbt.FundedPsbt.ToBase64(), n);
+        var psbt = PSBT.Parse(fundedPsbt.FundedPsbt.ToBase64(), networkChain);
         var txIdHexString = psbt.GetGlobalTransaction().GetHash().ToString();
         Console.WriteLine($"LoopStaticInDeposit: Generated funded TX: {txIdHexString}");
-        
+
         //Signs and returns raw tx to transmit
         var finalizedPsbt = node.WalletKitClient.FinalizePsbt(new FinalizePsbtRequest()
         {
             FundedPsbt = fundedPsbt.FundedPsbt
-        });   
+        });
         Console.WriteLine($"LoopStaticInDeposit: Finalized TX: {txIdHexString}");
-        
+
         //Publish
         var publicRes = node.WalletKitClient.PublishTransaction(new Transaction()
         {
             Label = $"Loop Static In Split",
             TxHex = finalizedPsbt.RawFinalTx
-        }); 
+        });
     }
-    
+
     [Test]
     [Category("Payment")]
     [NonParallelizable]
