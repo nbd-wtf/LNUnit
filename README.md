@@ -20,7 +20,7 @@ developers to write tests that check the functionality and performance of their 
 ## Features
 ---
 
-- Support for Bitcoin Lightning network systems (LND more to come)
+- Support for LND gRPC
 - Test cases can be written in C#
 - Automated test discovery
 - Test fixtures for setting up and tearing down test environments
@@ -46,3 +46,5 @@ $ brew install chipmk/tap/docker-mac-net-connect
 # Run the service and register it to launch at boot
 $ sudo brew services start chipmk/tap/docker-mac-net-connect
 ```
+
+Recently also have had good success with [OrbStack](https://orbstack.dev/), just works out of the box.

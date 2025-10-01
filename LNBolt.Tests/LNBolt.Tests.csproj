@@ -15,7 +15,7 @@
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
         <PackageReference Include="NLightning.Bolt11" Version="4.0.0" />
         <PackageReference Include="NUnit" Version="3.14.0" />
-        <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+        <PackageReference Include="NUnit3TestAdapter" Version="5.1.0" />
         <PackageReference Include="org.ldk" Version="0.1.5" />
         <PackageReference Include="coverlet.collector" Version="6.0.4">
             <PrivateAssets>all</PrivateAssets>
