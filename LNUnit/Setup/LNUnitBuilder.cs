@@ -973,11 +973,11 @@ public static class LNUnitBuilderExtensions
             "--gossip.max-channel-update-burst=100",
             "--gossip.channel-update-interval=1s"
         };
-        // if (nativeSql)
-        // {
-        //     cmd.Add("--db.use-native-sql");
-        //
-        // }
+        if (nativeSql)
+        {
+            cmd.Add("--db.use-native-sql");
+        
+        }
         if (lndkSupport) //TODO: must compile LND with 'dev' flags before can play with this
         {
             cmd.Add("--protocol.custom-message=513");
@@ -995,6 +995,11 @@ public static class LNUnitBuilderExtensions
             cmd.Add($"--db.postgres.dsn={postgresDSN}");
             cmd.Add("--db.postgres.timeout=300s");
             cmd.Add("--db.postgres.maxconnections=16");
+        }
+        else if (postgresDSN.IsEmpty() && nativeSql)
+        {
+            //Sqlite mode
+            cmd.Add("--db.backend=sqlite");
         }
 
         if (gcInvoiceOnStartup) cmd.Add("--gc-canceled-invoices-on-startup");
