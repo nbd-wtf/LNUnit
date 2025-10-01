@@ -14,8 +14,8 @@ using Feature = ServiceStack.Feature;
 namespace LNUnit.Tests;
 
 //[Ignore("only local")]
-//[TestFixture("boltdb", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
-[TestFixture("sqlite", "lightninglabs/lnd", "v0.19.3-beta", "/root/.lnd", true)]
+[TestFixture("sqlite", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+//[TestFixture("sqlite", "lightninglabs/lnd", "v0.19.3-beta", "/root/.lnd", true)]
 public class AbcLightningAbstractTestsSqlite : LNUnit.Tests.Abstract.AbcLightningAbstractTests
 {
     public AbcLightningAbstractTestsSqlite(string dbType = "sqlite",
