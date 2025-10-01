@@ -15,7 +15,7 @@ mkdir -p ./Grpc/peersrpc
 mkdir -p ./Grpc/looprpc
 mkdir -p ./Grpc/swapserverrpc
 
-LND_TAG=${1:-v0.19.3-beta}
+LND_TAG=${1:-v0.20.0-beta.rc1}
 LOOP_TAG=${2:-master}
 
 
