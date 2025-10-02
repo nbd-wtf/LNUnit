@@ -921,7 +921,7 @@ public static class LNUnitBuilderExtensions
                 @"-zmqpubhashblock=tcp://0.0.0.0:28336",
                 $"-txindex={(txIndex ? "1" : "0")}",
                 @"-dnsseed=0",
-                @"-upnp=0",
+                @"-natpmp=0",  //changed in v30 was upnp=0 now invalid.
                 @"-rpcbind=0.0.0.0",
                 @"-rpcallowip=0.0.0.0/0",
                 @"-rpcport=18443",
