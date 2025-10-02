@@ -81,7 +81,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
         await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0", ["bitcoin:latest", "bitcoin:30.0"]);
-        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, bitcoinImage:"bitcoin", bitcoinTag:"30.0",  pullBitcoinImage: false);
+        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, bitcoinImage: "bitcoin", bitcoinTag: "30.0", pullBitcoinImage: false);
     }
 
 
