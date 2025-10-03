@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using Dasync.Collections;
 using Docker.DotNet;
 using dotnet_etcd;
+using Etcdserverpb;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
 using Grpc.Core;
@@ -198,10 +199,12 @@ public abstract class EctdLightningAbstractTests : IDisposable
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null, lndkSupport: false, nativeSql: _dbType != "boltdb");
 
-        await Builder.Build(lndRoot: lndRoot, ectdEnabled:true);
+        await Builder.Build(lndRoot: lndRoot, ectdEnabled: true);
 
         await WaitNodesReady();
         await WaitGraphReady();
+
+        Assert.That(await CheckEctdRunning(), Is.True);
     }
 
     private async Task WaitNodesReady()
@@ -246,16 +249,17 @@ public abstract class EctdLightningAbstractTests : IDisposable
         return false;
     }
 
-    [Test]
-    public async Task CheckEctdRunning()
+    [Test(ExpectedResult = true)]
+    public async Task<bool> CheckEctdRunning()
     {
         var inspect = await _client.Containers.InspectContainerAsync("etcd");
         Assert.IsTrue(inspect.State.Running, "Etcd running is not running");
-        var x = new EtcdClient("http://localhost:2379");
-        
-        
+        var etcdClient = new EtcdClient($"http://{inspect.NetworkSettings.IPAddress}:2379");
+        var status = await etcdClient.StatusAsync(new StatusRequest());
+        Assert.That(status.Version, Is.EqualTo("3.5.9"));
+        return true;
     }
-    
+
     [Test]
     [Timeout(2000)]
     [Category("Version")]
@@ -266,7 +270,7 @@ public abstract class EctdLightningAbstractTests : IDisposable
         var info = n.LightningClient.GetInfo(new GetInfoRequest());
         info.Version.Print();
     }
- 
+
 
     private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
     protected readonly string _dbType;
@@ -298,5 +302,5 @@ public abstract class EctdLightningAbstractTests : IDisposable
         return alias;
     }
 
-    
+
 }

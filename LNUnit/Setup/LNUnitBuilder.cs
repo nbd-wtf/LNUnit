@@ -112,30 +112,30 @@ public class LNUnitBuilder : IDisposable
         //Setup network
         if (setupNetwork)
             Configuration.DockerNetworkId = await _dockerClient.BuildTestingNetwork(Configuration.BaseName);
-        
+
         if (ectdEnabled)
         {
-            
-// ## Option 5: Single-node development setup (simplest)
-//             services:
-//             etcd:
-//             image: quay.io/coreos/etcd:v3.5.9
-//             container_name: etcd-single
-//             environment:
-//             - ETCDCTL_API=3
-//             command:
-//             - etcd
-//                 - --advertise-client-urls=http://localhost:2379
-//             - --listen-client-urls=http://0.0.0.0:2379
-//             - --max-txn-ops=16384
-//                 - --max-request-bytes=104857600
-//             ports:
-//             - "2379:2379"
-//             volumes:
-//             - etcd-data:/default.etcd
+
+            // ## Option 5: Single-node development setup (simplest)
+            //             services:
+            //             etcd:
+            //             image: quay.io/coreos/etcd:v3.5.9
+            //             container_name: etcd-single
+            //             environment:
+            //             - ETCDCTL_API=3
+            //             command:
+            //             - etcd
+            //                 - --advertise-client-urls=http://localhost:2379
+            //             - --listen-client-urls=http://0.0.0.0:2379
+            //             - --max-txn-ops=16384
+            //                 - --max-request-bytes=104857600
+            //             ports:
+            //             - "2379:2379"
+            //             volumes:
+            //             - etcd-data:/default.etcd
             var ectdImageTag = new
             {
-                Image = @"gcr.io/etcd-development/etcd", 
+                Image = @"gcr.io/etcd-development/etcd",
                 Tag = "v3.5.9",
             };
             await _dockerClient.PullImageAndWaitForCompleted(ectdImageTag.Image, ectdImageTag.Tag);
@@ -147,15 +147,15 @@ public class LNUnitBuilder : IDisposable
                     NetworkMode = $"{Configuration.DockerNetworkId}"
                 },
                 Name = "etcd",
-                Hostname ="etcd",
-                ExposedPorts =  new Dictionary<string, EmptyStruct>
+                Hostname = "etcd",
+                ExposedPorts = new Dictionary<string, EmptyStruct>
                 {
                     { "2379", new EmptyStruct() }
-                }, 
+                },
                 Env = new List<string>()
                 {
                     "ETCDCTL_API=3",
-                    "ETCD_NAME=etcd0", 
+                    "ETCD_NAME=etcd0",
                     "ETCD_DATA_DIR=/etcd-data",
                     "ETCD_ADVERTISE_CLIENT_URLS=http://etcd:2379",
                     "ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379",
@@ -165,12 +165,12 @@ public class LNUnitBuilder : IDisposable
                     "ETCD_MAX_TXN_OPS=16384",
                     "ETCD_MAX_REQUEST_BYTES=104857600",
                 }
-                
+
             });
             var success =
                 await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
             await Task.Delay(500);
-            
+
         }
         //Setup BTC Nodes
 
