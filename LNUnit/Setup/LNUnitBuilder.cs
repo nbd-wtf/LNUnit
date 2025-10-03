@@ -97,7 +97,7 @@ public class LNUnitBuilder : IDisposable
         IsDestoryed = true;
     }
 
-    public async Task Build(bool setupNetwork = false, string lndRoot = "/home/lnd/.lnd", bool ectdEnabled = false)
+    public async Task Build(bool setupNetwork = false, string lndRoot = "/home/lnd/.lnd", bool etcdEnabled = false)
     {
         _logger?.LogInformation("Building LNUnit scenerio.");
         //Validation
@@ -112,8 +112,8 @@ public class LNUnitBuilder : IDisposable
         //Setup network
         if (setupNetwork)
             Configuration.DockerNetworkId = await _dockerClient.BuildTestingNetwork(Configuration.BaseName);
-
-        if (ectdEnabled)
+        var etcdHostAndPort = string.Empty;
+        if (etcdEnabled)
         {
 
             // ## Option 5: Single-node development setup (simplest)
@@ -170,6 +170,8 @@ public class LNUnitBuilder : IDisposable
             var success =
                 await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
             await Task.Delay(500);
+            var info = await _dockerClient.Containers.InspectContainerAsync(nodeContainer.ID);
+            etcdHostAndPort = $"{info.NetworkSettings.IPAddress}:2379";
 
         }
         //Setup BTC Nodes
@@ -309,6 +311,11 @@ public class LNUnitBuilder : IDisposable
         foreach (var n in Configuration.LNDNodes) //TODO: can do multiple at once
         {
             if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag);
+
+            if (etcdEnabled && !n.Cmd.Any(x => x.StartsWith("--db.etcd.host=")))
+            {
+                n.Cmd.Add($"--db.etcd.host={etcdHostAndPort}");
+            }
             var createContainerParameters = new CreateContainerParameters
             {
                 Image = $"{n.Image}:{n.Tag}",
@@ -1000,12 +1007,20 @@ public static class LNUnitBuilderExtensions
         return b;
     }
 
+    public class LndClusterConfig
+    {
+        public string HostAndPort { get; set; } //will populate if not supplied
+        public required string Id { get; set; }
+        public required string ElectionPrefix { get; set; } = "lnd";
+    }
+
     public static LNUnitBuilder AddPolarLNDNode(this LNUnitBuilder b, string aliasHostname,
         List<LNUnitNetworkDefinition.Channel>? channels = null, string bitcoinMinerHost = "miner",
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
         bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null,
-        string lndRoot = "/home/lnd/.lnd", bool lndkSupport = false, bool nativeSql = false, bool storeFinalHtlcResolutions = false)
+        string lndRoot = "/home/lnd/.lnd", bool lndkSupport = false, bool nativeSql = false, bool storeFinalHtlcResolutions = false,
+        LndClusterConfig? etcdConfiguration = null)
     {
         var cmd = new List<string>
         {
@@ -1066,6 +1081,28 @@ public static class LNUnitBuilderExtensions
         if (gcInvoiceOnFly) cmd.Add("--gc-canceled-invoices-on-the-fly");
 
         if (acceptKeysend) cmd.Add(@"--accept-keysend");
+
+        if (etcdConfiguration != null)
+        {
+            if (!etcdConfiguration.HostAndPort.IsNullOrEmpty()) //if provided use, otherwise populate on Build() after etcd booted with ip
+            {
+                cmd.Add($"--db.etcd.host={etcdConfiguration.HostAndPort}");
+            }
+            // --db.etcd.host=127.0.0.1:2379 \
+            // --db.etcd.certfile=/home/user/etcd/bin/default.etcd/fixtures/client/cert.pem \
+            // --db.etcd.keyfile=/home/user/etcd/bin/default.etcd/fixtures/client/key.pem \
+            // --db.etcd.insecure_skip_verify \
+            // --cluster.enable-leader-election \
+            // --cluster.leader-elector=etcd \
+            // --cluster.etcd-election-prefix=cluster-leader \
+            // --cluster.id=lnd-1
+            cmd.Add($"--db.etcd.disabletls");
+            cmd.Add($"--db.etcd.insecure_skip_verify");
+            cmd.Add("--cluster.enable-leader-election");
+            // cmd.Add($"--cluster.etcd-election-prefix={etcdConfiguration.ElectionPrefix}");
+            cmd.Add($"--cluster.id={etcdConfiguration.Id}");
+
+        }
 
         var node = new LNUnitNetworkDefinition.LndNode
         {

@@ -157,7 +157,12 @@ public abstract class EctdLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport: false, nativeSql: _dbType != "boltdb", storeFinalHtlcResolutions: true);
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport: false, nativeSql: _dbType != "boltdb", storeFinalHtlcResolutions: true,
+            etcdConfiguration: new LNUnitBuilderExtensions.LndClusterConfig()
+            {
+                Id = "alice",
+                ElectionPrefix = "lnd-cluster"
+            });
 
         Builder.AddPolarLNDNode("bob",
             [
@@ -199,7 +204,7 @@ public abstract class EctdLightningAbstractTests : IDisposable
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
             postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null, lndkSupport: false, nativeSql: _dbType != "boltdb");
 
-        await Builder.Build(lndRoot: lndRoot, ectdEnabled: true);
+        await Builder.Build(lndRoot: lndRoot, etcdEnabled: true);
 
         await WaitNodesReady();
         await WaitGraphReady();
