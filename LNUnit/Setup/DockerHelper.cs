@@ -1,5 +1,6 @@
 using Docker.DotNet;
 using Docker.DotNet.Models;
+using ServiceStack;
 using SharpCompress.Common;
 using SharpCompress.Writers;
 
@@ -15,7 +16,7 @@ public static class DockerHelper
     /// <param name="client"></param>
     /// <param name="imageName"></param>
     /// <param name="tag"></param>
-    public static async Task PullImageAndWaitForCompleted(this DockerClient client, string imageName, string tag)
+    public static async Task PullImageAndWaitForCompleted(this DockerClient client, string imageName, string tag, string? repo = null)
     {
         var done = false;
         var p = new Progress<JSONMessage>();
@@ -24,12 +25,17 @@ public static class DockerHelper
             if (message.Status.StartsWith("Digest: sha256:") || message.Status.EndsWith("Already exists"))
                 done = true;
         };
+        var i = new ImagesCreateParameters
+        {
+            FromImage = imageName,
+            Tag = tag
+        };
+        if (!repo.IsNullOrEmpty())
+        {
+            i.Repo = repo;
+        }
         await client.Images.CreateImageAsync(
-            new ImagesCreateParameters
-            {
-                FromImage = imageName,
-                Tag = tag
-            },
+           i,
             // new AuthConfig
             // {
             //     Email = "test@example.com",
