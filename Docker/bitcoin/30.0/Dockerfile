@@ -1,7 +1,7 @@
 FROM debian:stable-slim
 
 ARG BITCOIN_VERSION="30.0"
-ENV PATH=/opt/bitcoin-30.0rc2/bin:$PATH
+ENV PATH=/opt/bitcoin-30.0/bin:$PATH
 
 RUN apt-get update -y \
   && apt-get install -y curl gosu \
@@ -9,7 +9,7 @@ RUN apt-get update -y \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN SYS_ARCH="$(uname -m)" \
-  && curl -SLO https://bitcoincore.org/bin/bitcoin-core-30.0/test.rc2/bitcoin-30.0rc2-${SYS_ARCH}-linux-gnu.tar.gz \
+  && curl -SLO https://bitcoincore.org/bin/bitcoin-core-${BITCOIN_VERSION}/bitcoin-${BITCOIN_VERSION}-${SYS_ARCH}-linux-gnu.tar.gz \
   && tar -xzf *.tar.gz -C /opt \
   && rm *.tar.gz
 

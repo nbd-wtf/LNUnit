@@ -16,7 +16,7 @@ mkdir -p ./Grpc/looprpc
 mkdir -p ./Grpc/swapserverrpc
 
 LND_TAG=${1:-v0.20.0-beta.rc1}
-LOOP_TAG=${2:-master}
+LOOP_TAG=${2:-v0.31.2-beta}
 
 
 wget -O ./Grpc/lightning.proto https://raw.githubusercontent.com/lightningnetwork/lnd/$LND_TAG/lnrpc/lightning.proto

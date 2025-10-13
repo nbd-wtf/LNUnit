@@ -41,8 +41,7 @@
         <!--        <PackageReference Include="Serilog.Sinks.AwsCloudWatch" Version="4.0.182"/>-->
         <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
         <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" />
-        <PackageReference Include="System.Text.Json" Version="9.0.9" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.9" /> 
     </ItemGroup>
 
     <ItemGroup>
