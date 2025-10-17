@@ -287,9 +287,9 @@ public class LNUnitBuilder : IDisposable
             var adminMacaroonBase64String = Convert.ToBase64String(data);
 
 
-            var adminMacaroonTar =
-                await GetTarStreamFromFS(n.DockerContainerId,
-                    $"{basePath}/data/chain/bitcoin/regtest/admin.macaroon");
+            // var adminMacaroonTar =
+            //     await GetTarStreamFromFS(n.DockerContainerId,
+            //         $"{basePath}/data/chain/bitcoin/regtest/admin.macaroon");
 
 
             lndSettings.Add(new LNDSettings
