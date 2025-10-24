@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>LNUnit.LND</PackageId>
-        <Version>2.0.2</Version>
+        <Version>2.0.3</Version>
         <PackageDescription>LNUnit LND Typed Clients</PackageDescription>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <LangVersion>13.0</LangVersion>
@@ -34,7 +34,7 @@
 
         <PackageReference Include="Microsoft.NETCore.Targets" Version="5.0.0"/>
 
-        <PackageReference Include="NBitcoin" Version="9.0.1" />
+        <PackageReference Include="NBitcoin" Version="9.0.3" />
 
         <PackageReference Include="Portable.BouncyCastle" Version="1.9.0"/>
 
