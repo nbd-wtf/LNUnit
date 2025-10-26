@@ -1,6 +1,6 @@
 # If you change this please also update GO_VERSION in Makefile (then run
 # `make lint` to see where else it needs to be updated as well).
-FROM golang:1.24.6-alpine  AS builder
+FROM golang:1.25.3-alpine  AS builder
 
 # Force Go to use the cgo based DNS resolver. This is required to ensure DNS
 # queries required to connect to linked containers succeed.
@@ -25,7 +25,7 @@ RUN  git clone $git_url /go/src/github.com/lightningnetwork/lnd \
 
 FROM debian:stable-slim
 
-ARG LND_VERSION=0.20.0-beta.rc1
+ARG LND_VERSION=0.20.0-beta.rc2
 ENV PATH=/opt/lnd:$PATH
 
 RUN apt-get update -y \
