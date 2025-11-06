@@ -9,7 +9,7 @@ ENV GODEBUG=netdns=cgo
 # Pass a tag, branch or a commit using build-arg.  This allows a docker
 # image to be built from a specified Git state.  The default image
 # will use the Git tip of master by default.
-ARG checkout="v0.20.0-beta.rc3"
+ARG checkout="v0.20.0-beta.rc4"
 ARG git_url="https://github.com/lightningnetwork/lnd"
 
 # Install dependencies and build the binaries.
@@ -25,7 +25,7 @@ RUN  git clone $git_url /go/src/github.com/lightningnetwork/lnd \
 
 FROM debian:stable-slim
 
-ARG LND_VERSION=0.20.0-beta.rc3
+ARG LND_VERSION=0.20.0-beta.rc4
 ENV PATH=/opt/lnd:$PATH
 
 RUN apt-get update -y \
