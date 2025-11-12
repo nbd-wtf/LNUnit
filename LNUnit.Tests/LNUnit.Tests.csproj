@@ -18,15 +18,15 @@
         <PackageReference Include="Grpc.Net.Common" Version="2.71.0" />
 
         <PackageReference Include="JunitXml.TestLogger" Version="7.0.2" />
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="9.0.10" />
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.10" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="9.0.10" />
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" /> 
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="10.0.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" /> 
 <!--        <PackageReference Include="NLightning.Bolt11" Version="4.0.0" />-->
         <PackageReference Include="Npgsql" Version="9.0.4" />
         <PackageReference Include="NUnit" Version="3.14.0" />
         <PackageReference Include="NUnit3TestAdapter" Version="5.2.0" />
-        <PackageReference Include="NUnit.Analyzers" Version="4.10.0">
+        <PackageReference Include="NUnit.Analyzers" Version="4.11.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
@@ -40,8 +40,8 @@
         <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
         <!--        <PackageReference Include="Serilog.Sinks.AwsCloudWatch" Version="4.0.182"/>-->
         <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
-        <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.10" /> 
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0" /> 
     </ItemGroup>
 
     <ItemGroup>

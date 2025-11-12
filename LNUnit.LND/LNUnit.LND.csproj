@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>LNUnit.LND</PackageId>
-        <Version>2.0.3</Version>
+        <Version>2.0.4</Version>
         <PackageDescription>LNUnit LND Typed Clients</PackageDescription>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
         <LangVersion>13.0</LangVersion>
@@ -25,7 +25,7 @@
         <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
         <PackageReference Include="Grpc.Net.Common" Version="2.71.0" />
 
-        <PackageReference Include="Grpc.Tools" Version="2.72.0">
+        <PackageReference Include="Grpc.Tools" Version="2.76.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
@@ -40,7 +40,7 @@
 
         <PackageReference Include="Serilog" Version="4.3.0" />
         <PackageReference Include="ServiceStack.Text" Version="8.9.0" />
-        <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.10" />
+        <PackageReference Include="System.Configuration.ConfigurationManager" Version="10.0.0" />
         <PackageReference Include="System.Memory" Version="4.6.3" />
     </ItemGroup>
 
