@@ -15,6 +15,8 @@ using ServiceStack;
 using Signrpc;
 using Walletrpc;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+
 namespace LNUnit.LND;
 
 public class LNDNodeConnection : IDisposable
@@ -30,7 +32,7 @@ public class LNDNodeConnection : IDisposable
     {
         _logger = logger;
         Settings = settings;
-        StartWithBase64(settings.TLSCertBase64 ?? throw new InvalidOperationException(),
+        StartWithBase64(settings.TlsCertBase64 ?? throw new InvalidOperationException(),
             settings.MacaroonBase64 ?? throw new InvalidOperationException(),
             settings.GrpcEndpoint);
     }
@@ -39,7 +41,7 @@ public class LNDNodeConnection : IDisposable
     public LNDSettings Settings { get; internal set; }
 
     public string Host { get; internal set; }
-    public GrpcChannel gRPCChannel { get; internal set; }
+    private GrpcChannel GRpcChannel { get; set; }
     public Lightning.LightningClient LightningClient { get; internal set; }
     public Router.RouterClient RouterClient { get; internal set; }
     public Signer.SignerClient SignClient { get; internal set; }
@@ -63,7 +65,7 @@ public class LNDNodeConnection : IDisposable
     /// <summary>
     ///     Is at least at RPC Ready (will also report true if in ServerActive state)
     /// </summary>
-    public bool IsRPCReady
+    public bool IsRpcReady
     {
         get
         {
@@ -79,22 +81,22 @@ public class LNDNodeConnection : IDisposable
 
     public void Dispose()
     {
-        gRPCChannel?.Dispose();
+        GRpcChannel.Dispose();
     }
 
     public void StartWithBase64(string tlsCertBase64, string macaroonBase64, string host)
     {
         Host = host;
-        gRPCChannel = CreateGrpcConnection(host, tlsCertBase64, macaroonBase64);
-        LightningClient = new Lightning.LightningClient(gRPCChannel);
-        RouterClient = new Router.RouterClient(gRPCChannel);
-        SignClient = new Signer.SignerClient(gRPCChannel);
-        StateClient = new State.StateClient(gRPCChannel);
-        ChainNotifierClient = new ChainNotifier.ChainNotifierClient(gRPCChannel);
-        DevClient = new Dev.DevClient(gRPCChannel);
-        InvoiceClient = new Invoices.InvoicesClient(gRPCChannel);
-        PeersClient = new Peers.PeersClient(gRPCChannel);
-        WalletKitClient = new WalletKit.WalletKitClient(gRPCChannel);
+        GRpcChannel = CreateGrpcConnection(host, tlsCertBase64, macaroonBase64);
+        LightningClient = new Lightning.LightningClient(GRpcChannel);
+        RouterClient = new Router.RouterClient(GRpcChannel);
+        SignClient = new Signer.SignerClient(GRpcChannel);
+        StateClient = new State.StateClient(GRpcChannel);
+        ChainNotifierClient = new ChainNotifier.ChainNotifierClient(GRpcChannel);
+        DevClient = new Dev.DevClient(GRpcChannel);
+        InvoiceClient = new Invoices.InvoicesClient(GRpcChannel);
+        PeersClient = new Peers.PeersClient(GRpcChannel);
+        WalletKitClient = new WalletKit.WalletKitClient(GRpcChannel);
         _logger?.LogDebug("Setup gRPC with {Host}", host);
 
         var nodeInfo = LightningClient.GetInfo(new GetInfoRequest());
@@ -102,8 +104,8 @@ public class LNDNodeConnection : IDisposable
         LocalAlias = nodeInfo.Alias;
         _logger?.LogDebug("Connected gRPC to {Alias} {PubKey} @ {Host}", LocalAlias, LocalNodePubKey, host);
 
-        ClearnetConnectString = nodeInfo.Uris.FirstOrDefault(x => !x.Contains("onion"));
-        OnionConnectString = nodeInfo.Uris.FirstOrDefault(x => x.Contains("onion"));
+        ClearnetConnectString = nodeInfo.Uris.FirstOrDefault(x => !x.Contains("onion")) ?? string.Empty;
+        OnionConnectString = nodeInfo.Uris.FirstOrDefault(x => x.Contains("onion")) ?? string.Empty;
     }
 
     public GrpcChannel CreateGrpcConnection(string grpcEndpoint, string tlsCertBase64, string macaroonBase64)
@@ -115,7 +117,7 @@ public class LNDNodeConnection : IDisposable
         Environment.SetEnvironmentVariable("GRPC_SSL_CIPHER_SUITES", "HIGH+ECDSA");
         var httpClientHandler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, cetChain, policyErrors) => true
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
         };
         var certBytes = Convert.FromBase64String(tlsCertBase64);
         var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);
@@ -166,7 +168,7 @@ public class LNDNodeConnection : IDisposable
 
     public Task Stop()
     {
-        gRPCChannel.Dispose();
+        GRpcChannel.Dispose();
         return Task.CompletedTask;
     }
 

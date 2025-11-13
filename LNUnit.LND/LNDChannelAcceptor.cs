@@ -23,7 +23,6 @@ public class LNDChannelAcceptor : IDisposable
     }
 
     public bool Running { get; private set; }
-    public ulong InterceptCount { get; }
 
     public LNDNodeConnection Node { get; }
 

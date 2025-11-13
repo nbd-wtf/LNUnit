@@ -3,14 +3,14 @@ using Routerrpc;
 
 namespace LNUnit.LND;
 
-public class LNDHTLCMonitor
+public class LndHtlcMonitor
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     private readonly bool _disposed = false;
     private readonly Task<Task> _task;
 
-    public LNDHTLCMonitor(LNDNodeConnection connection, Action<HtlcEvent> onHtlcEvent = null)
+    public LndHtlcMonitor(LNDNodeConnection connection, Action<HtlcEvent> onHtlcEvent)
     {
         Node = connection;
         _task = Task.Factory.StartNew(SubscribeHtlcEventStream, _cancellationTokenSource.Token);
@@ -38,7 +38,7 @@ public class LNDHTLCMonitor
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }

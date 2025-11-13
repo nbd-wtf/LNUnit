@@ -6,7 +6,6 @@ using Google.Protobuf;
 using Grpc.Core;
 using Invoicesrpc;
 using Lnrpc;
-using LNUnit.Extentions;
 using LNUnit.LND;
 using LNUnit.Setup;
 using LNUnit.Tests.Fixture;
@@ -905,7 +904,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     public async Task GetNodeConnectionFromPool()
     {
         var data = Builder.LNDNodePool.GetLNDNodeConnection();
-        Assert.That(data.IsRPCReady);
+        Assert.That(data.IsRpcReady);
         Assert.That(data.IsServerReady);
         var found = Builder.LNDNodePool.GetLNDNodeConnection(data.LocalNodePubKey);
         Assert.That(data.LocalNodePubKey == found.LocalNodePubKey);
@@ -1114,10 +1113,10 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         //Apply HTLC hold to prevent payment from settling
         var htlcEvents = 0;
-        List<LNDHTLCMonitor> monitors = new();
+        List<LndHtlcMonitor> monitors = new();
         foreach (var n in Builder.LNDNodePool.ReadyNodes.ToImmutableList())
             //This disposes so should use Clone of connection
-            monitors.Add(new LNDHTLCMonitor(n.Clone(), htlc => { htlcEvents++; }));
+            monitors.Add(new LndHtlcMonitor(n.Clone(), htlc => { htlcEvents++; }));
 
 
         await Builder.DelayAllHTLCsOnAlias("alice", 1);

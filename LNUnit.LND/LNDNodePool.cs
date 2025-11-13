@@ -14,14 +14,14 @@ public class LNDNodePool : IDisposable
 {
     private const long StartupMaxTimeMilliseconds = 10_000;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
+    private readonly List<LNDSettings> _lndNodesNotYetInitialized = new();
     private readonly ILogger<LNDNodePool>? _logger;
+    private readonly List<LNDNodeConnection> _nodes = new();
     private readonly Stopwatch _runtime = Stopwatch.StartNew();
     private readonly IServiceProvider? _serviceProvider;
-    private readonly List<LNDSettings> _lndNodesNotYetInitialized = new();
-    private readonly List<LNDNodeConnection> _nodes = new();
-    public readonly List<LNDNodeConnection> ReadyNodes = new();
 
     private readonly TimeSpan _updateReadyStatesPeriod;
+    public readonly List<LNDNodeConnection> ReadyNodes = new();
 
     private bool _isDisposed;
     private bool _quickStartupMode;
@@ -213,7 +213,6 @@ public class LNDNodePool : IDisposable
         // we do have information to make that happen.
         return ReadyNodes.First();
     }
-
 
 
     /// <summary>

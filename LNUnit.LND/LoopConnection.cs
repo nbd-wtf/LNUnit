@@ -5,6 +5,8 @@ using Looprpc;
 using Microsoft.Extensions.Logging;
 using ServiceStack;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+
 namespace LNUnit.LND;
 
 public class LoopConnection : IDisposable
@@ -20,7 +22,7 @@ public class LoopConnection : IDisposable
     {
         _logger = logger;
         Settings = settings;
-        StartWithBase64(settings.TLSCertBase64 ?? throw new InvalidOperationException(),
+        StartWithBase64(settings.TlsCertBase64 ?? throw new InvalidOperationException(),
             settings.MacaroonBase64 ?? throw new InvalidOperationException(),
             settings.GrpcEndpoint);
     }
@@ -55,7 +57,7 @@ public class LoopConnection : IDisposable
         Environment.SetEnvironmentVariable("GRPC_SSL_CIPHER_SUITES", "HIGH+ECDSA");
         var httpClientHandler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (_, _, _, policyErrors) => true
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
         };
         var certBytes = Convert.FromBase64String(tlsCertBase64);
         var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);

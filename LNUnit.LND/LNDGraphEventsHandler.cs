@@ -61,7 +61,7 @@ public class LNDGraphEventsHandler : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }

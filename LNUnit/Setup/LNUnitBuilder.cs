@@ -187,7 +187,7 @@ public class LNUnitBuilder : IDisposable
             {
                 GrpcEndpoint = $"https://{ipAddress}:10009/",
                 MacaroonBase64 = adminMacaroonBase64String,
-                TLSCertBase64 = tlsCertBase64
+                TlsCertBase64 = tlsCertBase64
             };
             //lndSettings.Add(lndConfig);
             foreach (var dependentContainer in n.DependentContainers)
@@ -296,7 +296,7 @@ public class LNUnitBuilder : IDisposable
             {
                 GrpcEndpoint = $"https://{ipAddress}:10009/",
                 MacaroonBase64 = adminMacaroonBase64String,
-                TLSCertBase64 = tlsCertBase64
+                TlsCertBase64 = tlsCertBase64
             });
         }
 
@@ -451,7 +451,7 @@ public class LNUnitBuilder : IDisposable
         {
             GrpcEndpoint = $"https://{ipAddress}:10009/",
             MacaroonBase64 = adminMacaroonBase64String,
-            TLSCertBase64 = tlsCertBase64
+            TlsCertBase64 = tlsCertBase64
         };
     }
 

@@ -52,7 +52,7 @@ public class LNDStateMonitor
         {
             _cancellationTokenSource.Dispose();
             _task.Dispose();
-            Node?.Dispose();
+            Node.Dispose();
             Running = false;
         }
     }

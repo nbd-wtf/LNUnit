@@ -1,15 +1,11 @@
 using System.Security.Cryptography;
 using Lnrpc;
-using LNUnit.LND;
 using ServiceStack;
 
-namespace LNUnit.Extentions;
+namespace LNUnit.LND;
 
 public static class LNDExtensions
 {
-    private static Random r = new();
-
-
     public static LNDNodeConnection GetClient(this LNDSettings settings)
     {
         var client = new LNDNodeConnection(settings);
@@ -58,7 +54,7 @@ public static class LNDExtensions
         {
             aesAlg.Key = key;
             if (iv != null)
-                iv = aesAlg.IV;
+                aesAlg.IV = iv;
             aesAlg.Mode = CipherMode.CBC;
             // Create an encryptor to perform the stream transform.
             iv = aesAlg.IV;
@@ -79,28 +75,28 @@ public static class LNDExtensions
         return (encrypted, iv);
     }
 
-    public static byte[] DecryptStringFromBytesAes(this byte[] CipherData, byte[] Key, byte[] IV)
+    public static byte[] DecryptStringFromBytesAes(this byte[] cipherData, byte[] key, byte[] iv)
     {
         // Check arguments.
-        if (CipherData.Length <= 0)
-            throw new ArgumentNullException("CipherData");
-        if (Key == null || Key.Length <= 0)
-            throw new ArgumentNullException("Key");
-        if (IV == null || IV.Length <= 0)
-            throw new ArgumentNullException("IV");
+        if (cipherData.Length <= 0)
+            throw new ArgumentNullException("cipherData");
+        if (key == null || key.Length <= 0)
+            throw new ArgumentNullException("key");
+        if (iv == null || iv.Length <= 0)
+            throw new ArgumentNullException("iv");
 
         // Create an Aes object
         // with the specified key and IV.
         using (var aesAlg = Aes.Create())
         {
-            aesAlg.Key = Key;
-            aesAlg.IV = IV;
+            aesAlg.Key = key;
+            aesAlg.IV = iv;
             aesAlg.Mode = CipherMode.CBC;
             // Create a decryptor to perform the stream transform.
             var decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
             // Create the streams used for decryption.
-            using (var msDecrypt = new MemoryStream(CipherData))
+            using (var msDecrypt = new MemoryStream(cipherData))
             {
                 using (var csDecrypt = new CryptoStream(msDecrypt, decryptor, CryptoStreamMode.Read))
                 {
