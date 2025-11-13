@@ -5,7 +5,7 @@ public class LNDSettings
     /// <summary>
     ///     LND Host Grpc Endpoint (e.g. https://localhost:10009)
     /// </summary>
-    public required string GrpcEndpoint { get; set; }
+    public string? GrpcEndpoint { get; set; }
 
     /// <summary>
     ///     TLS Cert as Base64 string, if provided will be preferred source

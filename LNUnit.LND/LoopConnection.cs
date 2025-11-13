@@ -32,7 +32,7 @@ public class LoopConnection : IDisposable
 
     public string Host { get; internal set; }
     private GrpcChannel GRpcChannel { get; set; }
-    public required SwapClient.SwapClientClient SwapClient { get; set; }
+    public SwapClient.SwapClientClient SwapClient { get; set; }
 
     public void Dispose()
     {
