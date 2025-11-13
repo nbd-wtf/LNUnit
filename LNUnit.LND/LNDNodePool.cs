@@ -12,20 +12,20 @@ namespace LNUnit.LND;
 
 public class LNDNodePool : IDisposable
 {
-    private const long _startupMaxTimeMilliseconds = 10_000;
+    private const long StartupMaxTimeMilliseconds = 10_000;
     private readonly CancellationTokenSource _cancellationTokenSource = new();
     private readonly ILogger<LNDNodePool>? _logger;
     private readonly Stopwatch _runtime = Stopwatch.StartNew();
     private readonly IServiceProvider? _serviceProvider;
-    private readonly List<LNDSettings> LNDNodesNotYetInitialized = new();
-    private readonly List<LNDNodeConnection> Nodes = new();
+    private readonly List<LNDSettings> _lndNodesNotYetInitialized = new();
+    private readonly List<LNDNodeConnection> _nodes = new();
     public readonly List<LNDNodeConnection> ReadyNodes = new();
 
-    private readonly TimeSpan UpdateReadyStatesPeriod;
+    private readonly TimeSpan _updateReadyStatesPeriod;
 
     private bool _isDisposed;
-    private bool _quickStartupMode = true;
-    private PeriodicTimer RPCCheckTimer;
+    private bool _quickStartupMode;
+    private PeriodicTimer? _rpcCheckTimer;
 
 
     public LNDNodePool(IOptionsSnapshot<LNDNodePoolConfig> lndNodePoolConfig, ILogger<LNDNodePool> logger,
@@ -34,10 +34,10 @@ public class LNDNodePool : IDisposable
         _logger = logger;
         _serviceProvider = serviceProvider;
         var config = lndNodePoolConfig;
-        Nodes = config.Value.Nodes;
-        UpdateReadyStatesPeriod = TimeSpan.FromSeconds(lndNodePoolConfig.Value.UpdateReadyStatesPeriod);
-        LNDNodesNotYetInitialized.AddRange(config.Value.ConnectTo);
-        TotalNodes = Nodes.Count + config.Value.ConnectTo.Count;
+        _nodes = config.Value.Nodes;
+        _updateReadyStatesPeriod = TimeSpan.FromSeconds(lndNodePoolConfig.Value.UpdateReadyStatesPeriod);
+        _lndNodesNotYetInitialized.AddRange(config.Value.ConnectTo);
+        TotalNodes = _nodes.Count + config.Value.ConnectTo.Count;
         _quickStartupMode = config.Value.QuickStartupMode;
 
         SetupTimers();
@@ -50,10 +50,10 @@ public class LNDNodePool : IDisposable
         _logger = logger;
         _serviceProvider = serviceProvider;
         var config = lndNodePoolConfig;
-        Nodes = config.Nodes;
-        UpdateReadyStatesPeriod = TimeSpan.FromSeconds(lndNodePoolConfig.UpdateReadyStatesPeriod);
-        LNDNodesNotYetInitialized.AddRange(config.ConnectTo);
-        TotalNodes = Nodes.Count + config.ConnectTo.Count;
+        _nodes = config.Nodes;
+        _updateReadyStatesPeriod = TimeSpan.FromSeconds(lndNodePoolConfig.UpdateReadyStatesPeriod);
+        _lndNodesNotYetInitialized.AddRange(config.ConnectTo);
+        TotalNodes = _nodes.Count + config.ConnectTo.Count;
         _quickStartupMode = config.QuickStartupMode;
 
         SetupTimers();
@@ -71,8 +71,8 @@ public class LNDNodePool : IDisposable
     [Obsolete("Going towards .NET DI Options pattern as also makes it easy to enlist logger")]
     public LNDNodePool(List<LNDSettings> nodeSettings, int updateReadyStatesPeriod = 5, bool quickStartupMode = true)
     {
-        UpdateReadyStatesPeriod = TimeSpan.FromSeconds(updateReadyStatesPeriod);
-        LNDNodesNotYetInitialized.AddRange(nodeSettings);
+        _updateReadyStatesPeriod = TimeSpan.FromSeconds(updateReadyStatesPeriod);
+        _lndNodesNotYetInitialized.AddRange(nodeSettings);
         TotalNodes = nodeSettings.Count;
         _quickStartupMode = quickStartupMode;
         SetupTimers();
@@ -98,17 +98,17 @@ public class LNDNodePool : IDisposable
                 TotalNodes);
             _cancellationTokenSource.Cancel();
             _cancellationTokenSource.Dispose();
-            RPCCheckTimer.Dispose();
-            Nodes.ForEach(x => x.Dispose());
+            _rpcCheckTimer?.Dispose();
+            _nodes.ForEach(x => x.Dispose());
         }
     }
 
 
     private void SetupNotYetInitializedNodes()
     {
-        if (LNDNodesNotYetInitialized.Any())
+        if (_lndNodesNotYetInitialized.Any())
         {
-            var lndNodes = LNDNodesNotYetInitialized.CreateCopy();
+            var lndNodes = _lndNodesNotYetInitialized.CreateCopy();
 
             foreach (var settings in lndNodes)
                 try
@@ -117,10 +117,10 @@ public class LNDNodePool : IDisposable
                         ? ActivatorUtilities.CreateInstance(_serviceProvider, typeof(LNDNodeConnection), settings) as
                             LNDNodeConnection
                         : new LNDNodeConnection(settings); //No logging injection
-                    Nodes.Add(node);
-                    LNDNodesNotYetInitialized.Remove(
-                        LNDNodesNotYetInitialized.First(x => x.GrpcEndpoint == settings.GrpcEndpoint));
-                    _logger?.LogDebug("Connected to {Alias} @ {GrpcEndpoint}", node.LocalAlias,
+                    _nodes.Add(node!);
+                    _lndNodesNotYetInitialized.Remove(
+                        _lndNodesNotYetInitialized.First(x => x.GrpcEndpoint == settings.GrpcEndpoint));
+                    _logger?.LogDebug("Connected to {Alias} @ {GrpcEndpoint}", node!.LocalAlias,
                         settings.GrpcEndpoint);
                 }
                 catch (Exception ex)
@@ -132,20 +132,20 @@ public class LNDNodePool : IDisposable
 
     private void SetupTimers()
     {
-        RPCCheckTimer = _quickStartupMode
+        _rpcCheckTimer = _quickStartupMode
             ? new PeriodicTimer(TimeSpan.FromMilliseconds(100))
-            : new PeriodicTimer(UpdateReadyStatesPeriod);
+            : new PeriodicTimer(_updateReadyStatesPeriod);
         Task.Run(async () => await UpdateReadyStates(), _cancellationTokenSource.Token);
         _logger?.LogDebug("UpdateReadyStates: Task Started.");
     }
 
     private async Task UpdateReadyStates() //TIMER
     {
-        while (await RPCCheckTimer.WaitForNextTickAsync(_cancellationTokenSource.Token))
+        while (await _rpcCheckTimer!.WaitForNextTickAsync(_cancellationTokenSource.Token))
         {
             _logger?.LogDebug("UpdateReadyStates: Starting. Quick: {QuickMode}", _quickStartupMode);
             SetupNotYetInitializedNodes();
-            foreach (var node in Nodes)
+            foreach (var node in _nodes)
                 if (ReadyNodes.Contains(node) && !IsServerActive(node))
                 {
                     _logger?.LogDebug("UpdateReadyStates: {Alias} is NOT Ready, removing from pool.", node.LocalAlias);
@@ -160,12 +160,12 @@ public class LNDNodePool : IDisposable
                     }
                 }
 
-            if (_quickStartupMode && (_runtime.ElapsedMilliseconds > _startupMaxTimeMilliseconds ||
+            if (_quickStartupMode && (_runtime.ElapsedMilliseconds > StartupMaxTimeMilliseconds ||
                                       ReadyNodes.Count == TotalNodes)) // shutdown if all nodes are up OR time ran out
             {
-                _logger.LogDebug("UpdateReadyStates: Quick Startup Mode disabled.");
+                _logger?.LogDebug("UpdateReadyStates: Quick Startup Mode disabled.");
                 _quickStartupMode = false;
-                RPCCheckTimer = new PeriodicTimer(UpdateReadyStatesPeriod); //use provided standard polling period.
+                _rpcCheckTimer = new PeriodicTimer(_updateReadyStatesPeriod); //use provided standard polling period.
             }
 
             _logger?.LogDebug("UpdateReadyStates: Done.");
@@ -209,16 +209,19 @@ public class LNDNodePool : IDisposable
     /// <returns></returns>
     public LNDNodeConnection GetLNDNodeConnection()
     {
-        // this is dumb, but could do fancy stuff like push to node with lowest load, etc.
+        // this is dumb, but could do fancy stuff like push to node with the lowest load, etc.
         // we do have information to make that happen.
         return ReadyNodes.First();
     }
 
+    
+    
     /// <summary>
     ///     Takes all members in a pool and will 50/50 balance channels between them via invoice/payment method. only direct
     ///     peers, so 0 fees.
     /// </summary>
-    /// <param name="pool"></param>
+    /// <param name="deltaThreshold">minimum threshold to perform rebalance</param>
+    /// <returns></returns>
     public async Task<PoolRebalanceStats> RebalanceNodePool(int deltaThreshold = 100_000)
     {
         _logger?.LogDebug("RebalanceNodePool Start");
@@ -230,8 +233,8 @@ public class LNDNodePool : IDisposable
         var stats = new PoolRebalanceStats();
         foreach (var t in rebalanceTasks)
         {
-            var src = ReadyNodes.First(x => x.LocalNodePubKey == t.SrcPK);
-            var dest = ReadyNodes.First(x => x.LocalNodePubKey == t.DestPK);
+            var src = ReadyNodes.First(x => x.LocalNodePubKey == t.SrcPk);
+            var dest = ReadyNodes.First(x => x.LocalNodePubKey == t.DestPk);
             var paymentHash = await InvoicePayRebalance(src, dest, t.Amount, _logger, t.ChanId);
             if (!paymentHash.IsNullOrEmpty())
             {
@@ -239,7 +242,7 @@ public class LNDNodePool : IDisposable
                 stats.TotalAmount += (ulong)t.Amount;
                 stats.TotalRebalanceCount++;
                 //Updated PaymentHash info
-                t.PaymentHash = Convert.FromHexString(paymentHash);
+                t.PaymentHash = Convert.FromHexString(paymentHash!);
                 //write to db
                 if (SaveRebalanceAction != null) await SaveRebalanceAction(t);
                 stats.Tasks.Add(t);
@@ -255,14 +258,16 @@ public class LNDNodePool : IDisposable
     /// <param name="src">Funds going from local to remote</param>
     /// <param name="dest">Receiving funds from remote to local balance</param>
     /// <param name="valueInSataoshis"></param>
+    /// <param name="logger"></param>
+    /// <param name="channelId"></param>
     /// <returns>PaymentHash if successful</returns>
     public static async Task<string?> InvoicePayRebalance(LNDNodeConnection src, LNDNodeConnection dest,
         long valueInSataoshis,
-        ILogger _logger = null, ulong channelId = 0)
+        ILogger? logger = null, ulong channelId = 0)
     {
         try
         {
-            _logger?.LogDebug(
+            logger?.LogDebug(
                 "InvoicePayRebalance: Attemping rebalance of {Value} sats from {Source} to {Destination}.",
                 valueInSataoshis,
                 src.LocalAlias, dest.LocalAlias);
@@ -273,7 +278,7 @@ public class LNDNodePool : IDisposable
                 Memo = "InvoicePayRebalance",
                 Expiry = 60 //1 minute
             });
-            _logger?.LogDebug("InvoicePayRebalance: {PaymentRequest} for {Value} sats from {Source}",
+            logger?.LogDebug("InvoicePayRebalance: {PaymentRequest} for {Value} sats from {Source}",
                 invoice.PaymentRequest, valueInSataoshis, src.LocalAlias);
 
             var payment = new SendPaymentRequest
@@ -285,21 +290,18 @@ public class LNDNodePool : IDisposable
             if (channelId != 0) payment.OutgoingChanIds.Add(channelId);
             var streamingCallResponse = src.RouterClient.SendPaymentV2(payment);
             await streamingCallResponse.ResponseStream.MoveNext();
-            var response = streamingCallResponse.ResponseStream.Current.Status == Payment.Types.PaymentStatus.Succeeded;
-            _logger?.LogDebug(
+            // var response = streamingCallResponse.ResponseStream.Current.Status == Payment.Types.PaymentStatus.Succeeded;
+            logger?.LogDebug(
                 "InvoicePayRebalance: {PaymentRequest} for {Value} sats from {Source} paid by {PaymentHash}",
                 invoice.PaymentRequest, valueInSataoshis,
                 src.LocalAlias, streamingCallResponse.ResponseStream.Current.PaymentHash);
 
             return streamingCallResponse.ResponseStream.Current.PaymentHash;
         }
-        catch (Exception e)
+        catch (Exception)
         {
             return null;
         }
-        // Payment? paymentResponse = null;
-        // await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
-        // return paymentResponse?.Status == Payment.Types.PaymentStatus.Succeeded;
     }
 
 
@@ -308,6 +310,7 @@ public class LNDNodePool : IDisposable
     ///     This will push balance from higher node to lower to try to get to 0 difference.
     /// </summary>
     /// <param name="pool"></param>
+    /// <param name="deltaThreshold"></param>
     /// <returns>List of balance tasks to get to 50/50 split</returns>
     public static async Task<List<BalanceTask>> GetInteralNodeEvenBalaceTasks(LNDNodePool pool,
         int deltaThreshold = 100_000)
@@ -341,8 +344,8 @@ public class LNDNodePool : IDisposable
                     var b = new BalanceTask
                     {
                         ChanId = peerChannel.ChanId,
-                        SrcPK = peerChannel.RemotePubkey,
-                        DestPK = node.LocalNodePubKey,
+                        SrcPk = peerChannel.RemotePubkey,
+                        DestPk = node.LocalNodePubKey,
                         Amount = peerChannel.RemoteBalance - even,
                         ChannelPoint = peerChannel.ChannelPoint
                     };
@@ -355,8 +358,8 @@ public class LNDNodePool : IDisposable
                     var b = new BalanceTask
                     {
                         ChanId = peerChannel.ChanId,
-                        SrcPK = node.LocalNodePubKey,
-                        DestPK = peerChannel.RemotePubkey,
+                        SrcPk = node.LocalNodePubKey,
+                        DestPk = peerChannel.RemotePubkey,
                         Amount = peerChannel.LocalBalance - even,
                         ChannelPoint = peerChannel.ChannelPoint
                     };
@@ -389,9 +392,9 @@ public class LNDNodePool : IDisposable
     /// </summary>
     /// <param name="pubkey"></param>
     /// <returns></returns>
-    public LNDNodeConnection GetLNDNodeConnection(string pubkey)
+    public LNDNodeConnection? GetLNDNodeConnection(string pubkey)
     {
-        foreach (var node in Nodes)
+        foreach (var node in _nodes)
             if (node.LocalNodePubKey == pubkey)
                 return node;
         return null;
@@ -403,7 +406,7 @@ public class LNDNodePool : IDisposable
     /// <param name="node"></param>
     public void RemoveNode(LNDNodeConnection node)
     {
-        Nodes.Remove(node);
+        _nodes.Remove(node);
         ReadyNodes.Remove(node);
     }
 
@@ -413,7 +416,7 @@ public class LNDNodePool : IDisposable
     /// <param name="nodeSettings"></param>
     public void AddNode(LNDSettings nodeSettings)
     {
-        LNDNodesNotYetInitialized.Add(nodeSettings);
+        _lndNodesNotYetInitialized.Add(nodeSettings);
     }
 
     public class PoolRebalanceStats
@@ -425,11 +428,11 @@ public class LNDNodePool : IDisposable
 
     public record BalanceTask
     {
-        public string ChannelPoint { get; set; }
+        public required string ChannelPoint { get; set; }
         public ulong ChanId { get; set; }
-        public string SrcPK { get; set; }
-        public string DestPK { get; set; }
+        public required string SrcPk { get; set; }
+        public required string DestPk { get; set; }
         public long Amount { get; set; }
-        public byte[] PaymentHash { get; set; }
+        public byte[]? PaymentHash { get; set; }
     }
 }

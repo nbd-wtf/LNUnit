@@ -10,7 +10,6 @@ namespace LNUnit.LND;
 public class LoopConnection : IDisposable
 {
     private readonly ILogger<LoopConnection>? _logger;
-    private Random r = new();
 
     /// <summary>
     ///     Constructor auto-start
@@ -20,7 +19,9 @@ public class LoopConnection : IDisposable
     {
         _logger = logger;
         Settings = settings;
-        StartWithBase64(settings.TLSCertBase64, settings.MacaroonBase64, settings.GrpcEndpoint);
+        StartWithBase64(settings.TLSCertBase64 ?? throw new InvalidOperationException(), 
+            settings.MacaroonBase64 ?? throw new InvalidOperationException(), 
+            settings.GrpcEndpoint);
     }
 
 
@@ -44,7 +45,7 @@ public class LoopConnection : IDisposable
         _logger?.LogDebug("Setup Loop gRPC with {Host}", host);
     }
 
-    public GrpcChannel CreateGrpcConnection(string grpcEndpoint, string TLSCertBase64, string MacaroonBase64)
+    public GrpcChannel CreateGrpcConnection(string grpcEndpoint, string tlsCertBase64, string macaroonBase64)
     {
         // Due to updated ECDSA generated tls.cert we need to let gprc know that
         // we need to use that cipher suite otherwise there will be a handshake
@@ -55,12 +56,14 @@ public class LoopConnection : IDisposable
         {
             ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, cetChain, policyErrors) => true
         };
-        var x509Cert = new X509Certificate2(Convert.FromBase64String(TLSCertBase64));
+       // var x509Cert = new X509Certificate2(Convert.FromBase64String(tlsCertBase64));
+        var certBytes = Convert.FromBase64String(tlsCertBase64);
+        var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);
 
         httpClientHandler.ClientCertificates.Add(x509Cert);
         string macaroon;
 
-        macaroon = Convert.FromBase64String(MacaroonBase64).ToHex();
+        macaroon = Convert.FromBase64String(macaroonBase64).ToHex();
 
 
         var credentials = CallCredentials.FromInterceptor((_, metadata) =>

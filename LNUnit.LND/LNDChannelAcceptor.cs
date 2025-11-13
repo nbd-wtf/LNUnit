@@ -58,7 +58,7 @@ public class LNDChannelAcceptor : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             Running = false;
         }
