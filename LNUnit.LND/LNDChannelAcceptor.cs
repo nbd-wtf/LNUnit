@@ -1,4 +1,5 @@
 using Lnrpc;
+
 namespace LNUnit.LND;
 
 /// <summary>
@@ -22,7 +23,6 @@ public class LNDChannelAcceptor : IDisposable
     }
 
     public bool Running { get; private set; }
-    public ulong InterceptCount { get; }
 
     public LNDNodeConnection Node { get; }
 
@@ -57,7 +57,7 @@ public class LNDChannelAcceptor : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             Running = false;
         }

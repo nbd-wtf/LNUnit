@@ -12,7 +12,7 @@ public class LNDChannelInterceptorHandler
     }
 
     public LNDNodeConnection Node { get; }
-    public event Func<ChannelAcceptRequest, Task<ChannelAcceptResponse>> OnChannelRequest;
+    public event Func<ChannelAcceptRequest, Task<ChannelAcceptResponse>>? OnChannelRequest;
 
     private async Task ListenFromChannelAccept()
     {
@@ -21,8 +21,8 @@ public class LNDChannelInterceptorHandler
             while (await streamingEvents.ResponseStream.MoveNext())
             {
                 var channelRequest = streamingEvents.ResponseStream.Current;
-                var response = OnChannelRequest(channelRequest);
-                await streamingEvents.RequestStream.WriteAsync(await response);
+                var response = OnChannelRequest?.Invoke(channelRequest);
+                if (response != null) await streamingEvents.RequestStream.WriteAsync(await response);
             }
         }
     }

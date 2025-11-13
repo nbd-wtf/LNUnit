@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Grpc.Core;
 using Lnrpc;
-using Routerrpc;
 
 namespace LNUnit.LND;
 
@@ -11,8 +10,6 @@ namespace LNUnit.LND;
 public class LNDGraphEventsHandler : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
-
-    public LNDNodeConnection Node { get; }
     private readonly bool _disposed = false;
     private readonly Task<Task> _task;
 
@@ -26,6 +23,8 @@ public class LNDGraphEventsHandler : IDisposable
         while (!Running)
             Task.Delay(100).GetAwaiter().GetResult();
     }
+
+    public LNDNodeConnection Node { get; }
 
     public bool Running { get; private set; }
     public ulong InterceptCount { get; private set; }
@@ -49,10 +48,7 @@ public class LNDGraphEventsHandler : IDisposable
         try
         {
             using (var streamingEvents =
-                   Node.LightningClient.SubscribeChannelGraph(new GraphTopologySubscription()
-                   {
-
-                   }))
+                   Node.LightningClient.SubscribeChannelGraph(new GraphTopologySubscription()))
             {
                 Running = true;
                 while (await streamingEvents.ResponseStream.MoveNext().ConfigureAwait(false))
@@ -65,14 +61,13 @@ public class LNDGraphEventsHandler : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }
 
         Running = false;
     }
-
 
 
     public void Cancel()

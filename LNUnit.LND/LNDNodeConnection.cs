@@ -15,29 +15,33 @@ using ServiceStack;
 using Signrpc;
 using Walletrpc;
 
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
+
 namespace LNUnit.LND;
 
 public class LNDNodeConnection : IDisposable
 {
     private readonly ILogger<LNDNodeConnection>? _logger;
-    private Random r = new();
 
     /// <summary>
     ///     Constructor auto-start
     /// </summary>
     /// <param name="settings">LND Configuration Settings</param>
+    /// <param name="logger"></param>
     public LNDNodeConnection(LNDSettings settings, ILogger<LNDNodeConnection>? logger = null)
     {
         _logger = logger;
         Settings = settings;
-        StartWithBase64(settings.TLSCertBase64, settings.MacaroonBase64, settings.GrpcEndpoint);
+        StartWithBase64(settings.TlsCertBase64 ?? throw new InvalidOperationException(),
+            settings.MacaroonBase64 ?? throw new InvalidOperationException(),
+            settings.GrpcEndpoint);
     }
 
 
     public LNDSettings Settings { get; internal set; }
 
     public string Host { get; internal set; }
-    public GrpcChannel gRPCChannel { get; internal set; }
+    private GrpcChannel GRpcChannel { get; set; }
     public Lightning.LightningClient LightningClient { get; internal set; }
     public Router.RouterClient RouterClient { get; internal set; }
     public Signer.SignerClient SignClient { get; internal set; }
@@ -61,7 +65,7 @@ public class LNDNodeConnection : IDisposable
     /// <summary>
     ///     Is at least at RPC Ready (will also report true if in ServerActive state)
     /// </summary>
-    public bool IsRPCReady
+    public bool IsRpcReady
     {
         get
         {
@@ -77,22 +81,22 @@ public class LNDNodeConnection : IDisposable
 
     public void Dispose()
     {
-        gRPCChannel?.Dispose();
+        GRpcChannel.Dispose();
     }
 
     public void StartWithBase64(string tlsCertBase64, string macaroonBase64, string host)
     {
         Host = host;
-        gRPCChannel = CreateGrpcConnection(host, tlsCertBase64, macaroonBase64);
-        LightningClient = new Lightning.LightningClient(gRPCChannel);
-        RouterClient = new Router.RouterClient(gRPCChannel);
-        SignClient = new Signer.SignerClient(gRPCChannel);
-        StateClient = new State.StateClient(gRPCChannel);
-        ChainNotifierClient = new ChainNotifier.ChainNotifierClient(gRPCChannel);
-        DevClient = new Dev.DevClient(gRPCChannel);
-        InvoiceClient = new Invoices.InvoicesClient(gRPCChannel);
-        PeersClient = new Peers.PeersClient(gRPCChannel);
-        WalletKitClient = new WalletKit.WalletKitClient(gRPCChannel);
+        GRpcChannel = CreateGrpcConnection(host, tlsCertBase64, macaroonBase64);
+        LightningClient = new Lightning.LightningClient(GRpcChannel);
+        RouterClient = new Router.RouterClient(GRpcChannel);
+        SignClient = new Signer.SignerClient(GRpcChannel);
+        StateClient = new State.StateClient(GRpcChannel);
+        ChainNotifierClient = new ChainNotifier.ChainNotifierClient(GRpcChannel);
+        DevClient = new Dev.DevClient(GRpcChannel);
+        InvoiceClient = new Invoices.InvoicesClient(GRpcChannel);
+        PeersClient = new Peers.PeersClient(GRpcChannel);
+        WalletKitClient = new WalletKit.WalletKitClient(GRpcChannel);
         _logger?.LogDebug("Setup gRPC with {Host}", host);
 
         var nodeInfo = LightningClient.GetInfo(new GetInfoRequest());
@@ -100,11 +104,11 @@ public class LNDNodeConnection : IDisposable
         LocalAlias = nodeInfo.Alias;
         _logger?.LogDebug("Connected gRPC to {Alias} {PubKey} @ {Host}", LocalAlias, LocalNodePubKey, host);
 
-        ClearnetConnectString = nodeInfo.Uris.FirstOrDefault(x => !x.Contains("onion"));
-        OnionConnectString = nodeInfo.Uris.FirstOrDefault(x => x.Contains("onion"));
+        ClearnetConnectString = nodeInfo.Uris.FirstOrDefault(x => !x.Contains("onion")) ?? string.Empty;
+        OnionConnectString = nodeInfo.Uris.FirstOrDefault(x => x.Contains("onion")) ?? string.Empty;
     }
 
-    public GrpcChannel CreateGrpcConnection(string grpcEndpoint, string TLSCertBase64, string MacaroonBase64)
+    public GrpcChannel CreateGrpcConnection(string grpcEndpoint, string tlsCertBase64, string macaroonBase64)
     {
         // Due to updated ECDSA generated tls.cert we need to let gprc know that
         // we need to use that cipher suite otherwise there will be a handshake
@@ -113,14 +117,15 @@ public class LNDNodeConnection : IDisposable
         Environment.SetEnvironmentVariable("GRPC_SSL_CIPHER_SUITES", "HIGH+ECDSA");
         var httpClientHandler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, cetChain, policyErrors) => true
+            ServerCertificateCustomValidationCallback = (_, _, _, _) => true
         };
-        var x509Cert = new X509Certificate2(Convert.FromBase64String(TLSCertBase64));
+        var certBytes = Convert.FromBase64String(tlsCertBase64);
+        var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);
 
         httpClientHandler.ClientCertificates.Add(x509Cert);
         string macaroon;
 
-        macaroon = Convert.FromBase64String(MacaroonBase64).ToHex();
+        macaroon = Convert.FromBase64String(macaroonBase64).ToHex();
 
 
         var credentials = CallCredentials.FromInterceptor((_, metadata) =>
@@ -149,18 +154,21 @@ public class LNDNodeConnection : IDisposable
             var res = StateClient.GetState(new GetStateRequest(), null, DateTime.UtcNow.AddSeconds(timeOutSeconds));
             return res.State;
         }
-        catch (RpcException e)
+        catch (RpcException)
         {
+            // ignored
         }
-        catch (Exception e)
+        catch (Exception)
         {
+            // ignored
         }
+
         return WalletState.NonExisting;
     }
 
     public Task Stop()
     {
-        gRPCChannel.Dispose();
+        GRpcChannel.Dispose();
         return Task.CompletedTask;
     }
 
@@ -187,7 +195,7 @@ public class LNDNodeConnection : IDisposable
             payment.DestCustomRecords.Add(34349334,
                 ByteString.CopyFrom(Encoding.Default.GetBytes(message))); //message type
         var streamingCallResponse = RouterClient.SendPaymentV2(payment);
-        Payment paymentResponse = null;
+        Payment? paymentResponse = null;
         await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
         return paymentResponse;
     }

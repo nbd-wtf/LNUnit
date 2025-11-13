@@ -1,15 +1,11 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using Dasync.Collections;
 using Docker.DotNet;
 using Google.Protobuf;
-using Google.Protobuf.Collections;
 using Grpc.Core;
 using Invoicesrpc;
-// using LNBolt;
 using Lnrpc;
-using LNUnit.Extentions;
 using LNUnit.LND;
 using LNUnit.Setup;
 using LNUnit.Tests.Fixture;
@@ -22,6 +18,8 @@ using Serilog;
 using ServiceStack;
 using ServiceStack.Text;
 using Walletrpc;
+// using Dasync.Collections;
+// using LNBolt;
 using AddressType = Lnrpc.AddressType;
 using Assert = NUnit.Framework.Assert;
 using ListUnspentRequest = Lnrpc.ListUnspentRequest;
@@ -30,9 +28,18 @@ using Transaction = Walletrpc.Transaction;
 
 namespace LNUnit.Tests.Abstract;
 
-
 public abstract class AbcLightningAbstractTests : IDisposable
 {
+    private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
+    private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
+    protected readonly string _dbType;
+    protected readonly string _lndImage;
+    protected readonly string _lndRoot;
+    protected readonly bool _pullImage;
+    protected readonly string _tag;
+
+    private ServiceProvider _serviceProvider;
+
     public AbcLightningAbstractTests(string dbType,
         string lndImage = "custom_lnd",
         string tag = "latest",
@@ -45,6 +52,26 @@ public abstract class AbcLightningAbstractTests : IDisposable
         _tag = tag;
         _lndRoot = lndRoot;
         _pullImage = pullImage;
+    }
+
+
+    public string DbContainerName { get; set; } = "postgres";
+
+    public LNUnitBuilder? Builder { get; private set; }
+
+    public void Dispose()
+    {
+        GC.SuppressFinalize(this);
+
+        // Remove containers
+        _client.RemoveContainer("miner").GetAwaiter().GetResult();
+        _client.RemoveContainer("alice").GetAwaiter().GetResult();
+        _client.RemoveContainer("bob").GetAwaiter().GetResult();
+        _client.RemoveContainer("carol").GetAwaiter().GetResult();
+
+        Builder?.Destroy();
+        Builder?.Dispose();
+        _client.Dispose();
     }
 
     [SetUp]
@@ -80,38 +107,16 @@ public abstract class AbcLightningAbstractTests : IDisposable
         }
 
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0", ["bitcoin:latest", "bitcoin:30.0"]);
-        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, bitcoinImage: "bitcoin", bitcoinTag: "30.0", pullBitcoinImage: false);
+        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0",
+            ["bitcoin:latest", "bitcoin:30.0"]);
+        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, "bitcoin", "30.0");
     }
-
-
-
-    public string DbContainerName { get; set; } = "postgres";
-    private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
-
-    private ServiceProvider _serviceProvider;
-
-    public void Dispose()
-    {
-        GC.SuppressFinalize(this);
-
-        // Remove containers
-        _client.RemoveContainer("miner").GetAwaiter().GetResult();
-        _client.RemoveContainer("alice").GetAwaiter().GetResult();
-        _client.RemoveContainer("bob").GetAwaiter().GetResult();
-        _client.RemoveContainer("carol").GetAwaiter().GetResult();
-
-        Builder?.Destroy();
-        Builder?.Dispose();
-        _client.Dispose();
-    }
-
-    public LNUnitBuilder? Builder { get; private set; }
 
 
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
-        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "polarlightning/bitcoind", string bitcoinTag = "29.0",
-         bool pullBitcoinImage = false)
+        string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "polarlightning/bitcoind",
+        string bitcoinTag = "29.0",
+        bool pullBitcoinImage = false)
     {
         await _client.RemoveContainer("miner");
         await _client.RemoveContainer("alice");
@@ -120,15 +125,9 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         Builder.AddBitcoinCoreNode(image: bitcoinImage, tag: bitcoinTag, pullImage: pullBitcoinImage);
 
-        if (pullLndImage)
-        {
-            await _client.PullImageAndWaitForCompleted(lndImage, lndTag);
-        }
+        if (pullLndImage) await _client.PullImageAndWaitForCompleted(lndImage, lndTag);
 
-        if (pullBitcoinImage)
-        {
-            await _client.PullImageAndWaitForCompleted(bitcoinImage, bitcoinTag);
-        }
+        if (pullBitcoinImage) await _client.PullImageAndWaitForCompleted(bitcoinImage, bitcoinTag);
 
 
         Builder.AddPolarLNDNode("alice",
@@ -154,7 +153,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null, lndkSupport: false, nativeSql: _dbType != "boltdb", storeFinalHtlcResolutions: true);
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["alice"] : null,
+            lndkSupport: false, nativeSql: _dbType != "boltdb", storeFinalHtlcResolutions: true);
 
         Builder.AddPolarLNDNode("bob",
             [
@@ -165,7 +165,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "alice"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null, lndkSupport: false, nativeSql: _dbType != "boltdb");
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["bob"] : null, lndkSupport: false,
+            nativeSql: _dbType != "boltdb");
 
         Builder.AddPolarLNDNode("carol",
             [
@@ -194,7 +195,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
                     RemoteName = "bob"
                 }
             ], imageName: lndImage, tagName: lndTag, pullImage: false, acceptKeysend: true, mapTotmp: false,
-            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null, lndkSupport: false, nativeSql: _dbType != "boltdb");
+            postgresDSN: _dbType == "postgres" ? PostgresFixture.LNDConnectionStrings["carol"] : null,
+            lndkSupport: false, nativeSql: _dbType != "boltdb");
 
         await Builder.Build(lndRoot: lndRoot);
 
@@ -366,7 +368,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
     //     return PSBT.FromTransaction(tx, network);
     // }
 
-    private async Task<string> CreatePsbtOutputTemplateBitcoinRPC(int numberOfOutputs, string destinationAddress, long amountPerOutputSats, Network network)
+    private async Task<string> CreatePsbtOutputTemplateBitcoinRPC(int numberOfOutputs, string destinationAddress,
+        long amountPerOutputSats, Network network)
     {
         return await Builder.BitcoinRpcClient.CreateMultiOutputPsbt(destinationAddress, amountPerOutputSats,
             numberOfOutputs);
@@ -374,12 +377,15 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
     [TestCase(2, "bcrt1pau9xpav22lr592a2fgldkqy65e42uz5gdgy8et6kgvkrtep5gkeq07uyla", 1000, "regtest")]
     [Category("PSBT")]
-    public async Task PSBTFlow(int numberOfOutputs, string depositAddress, int amountPerOutputSats, string network, ulong feeRate = 1)
+    public async Task PSBTFlow(int numberOfOutputs, string depositAddress, int amountPerOutputSats, string network,
+        ulong feeRate = 1)
     {
         var networkChain = Network.GetNetwork(network);
-        var psbtOutputTemplate = await CreatePsbtOutputTemplateBitcoinRPC(numberOfOutputs, depositAddress, amountPerOutputSats, networkChain);
+        var psbtOutputTemplate =
+            await CreatePsbtOutputTemplateBitcoinRPC(numberOfOutputs, depositAddress, amountPerOutputSats,
+                networkChain);
         //This verifies is fundable, and leases outputs.
-        var fundReq = new FundPsbtRequest()
+        var fundReq = new FundPsbtRequest
         {
             Psbt = ByteString.FromBase64(psbtOutputTemplate)
         };
@@ -395,16 +401,16 @@ public abstract class AbcLightningAbstractTests : IDisposable
         Console.WriteLine($"LoopStaticInDeposit: Generated funded TX: {txIdHexString}");
 
         //Signs and returns raw tx to transmit
-        var finalizedPsbt = node.WalletKitClient.FinalizePsbt(new FinalizePsbtRequest()
+        var finalizedPsbt = node.WalletKitClient.FinalizePsbt(new FinalizePsbtRequest
         {
             FundedPsbt = fundedPsbt.FundedPsbt
         });
         Console.WriteLine($"LoopStaticInDeposit: Finalized TX: {txIdHexString}");
 
         //Publish
-        var publicRes = node.WalletKitClient.PublishTransaction(new Transaction()
+        var publicRes = node.WalletKitClient.PublishTransaction(new Transaction
         {
-            Label = $"Loop Static In Split",
+            Label = "Loop Static In Split",
             TxHex = finalizedPsbt.RawFinalTx
         });
     }
@@ -413,7 +419,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("Payment")]
     [NonParallelizable]
     [Timeout(5000)]
-
     public async Task FailureNoRouteBecauseFeesAreTooHigh()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("carol", new Invoice
@@ -462,48 +467,43 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var bob = await Builder.GetNodeFromAlias("bob");
         var preimage = new byte[32];
         preimage[0] = 19;
-        var hasher = System.Security.Cryptography.SHA256Managed.Create();
+        var hasher = SHA256Managed.Create();
 
         var hash = hasher.ComputeHash(preimage);
-        var i = bob.InvoiceClient.AddHoldInvoice(new AddHoldInvoiceRequest()
+        var i = bob.InvoiceClient.AddHoldInvoice(new AddHoldInvoiceRequest
         {
             Hash = ByteString.CopyFrom(hash),
             Memo = "Test HOLD invoice",
             ValueMsat = 10_000, //10 sat,
-            Expiry = 20,
+            Expiry = 20
         });
-        var paymentResponse = Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest()
+        var paymentResponse = Builder.MakeLightningPaymentFromAlias("alice", new SendPaymentRequest
         {
             PaymentRequest = i.PaymentRequest,
             NoInflightUpdates = true,
-            TimeoutSeconds = 20,
+            TimeoutSeconds = 20
         });
         Task.Run(() =>
-         {
-
-             var run = true;
-             while (run)
-             {
-                 try
-                 {
-                     var settle = bob.InvoiceClient.SettleInvoice(new SettleInvoiceMsg()
-                     {
-                         Preimage = ByteString.CopyFrom(preimage)
-                     });
-                     if (settle != null)
-                         run = false;
-                     Task.Yield().GetAwaiter().GetResult();
-                 }
-                 catch (Exception e)
-                 {
-                     Debug.Print(e.ToString());
-                     // do nothing
-                 }
-
-             }
-         });
+        {
+            var run = true;
+            while (run)
+                try
+                {
+                    var settle = bob.InvoiceClient.SettleInvoice(new SettleInvoiceMsg
+                    {
+                        Preimage = ByteString.CopyFrom(preimage)
+                    });
+                    if (settle != null)
+                        run = false;
+                    Task.Yield().GetAwaiter().GetResult();
+                }
+                catch (Exception e)
+                {
+                    Debug.Print(e.ToString());
+                    // do nothing
+                }
+        });
         Assert.That(paymentResponse.GetAwaiter().GetResult() != null);
-
     }
 
     // [Test]
@@ -674,11 +674,9 @@ public abstract class AbcLightningAbstractTests : IDisposable
             });
         });
         //Move things along so it is confirmed
-        await Builder.NewBlock(1);
+        await Builder.NewBlock();
         while (!alice.LightningClient.GetInfo(new GetInfoRequest()).SyncedToChain) //wait until synced so can open
-        {
             await Task.Delay(1000);
-        }
         //works public, large enough
         var channelPoint = await alice.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
         {
@@ -793,7 +791,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
 
     /// <summary>
-    /// Keysend from Alice and Carol to Bob, see how many can clear in 10s.
+    ///     Keysend from Alice and Carol to Bob, see how many can clear in 10s.
     /// </summary>
     /// <param name="threads"></param>
     [Test]
@@ -819,41 +817,28 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var fail_count = 0;
         var cts = new CancellationTokenSource();
 
-        var mc_base = await alice.RouterClient.QueryMissionControlAsync(new QueryMissionControlRequest()
-        {
-
-        });
+        var mc_base = await alice.RouterClient.QueryMissionControlAsync(new QueryMissionControlRequest());
         while (sw.ElapsedMilliseconds <= 10_000)
-        {
             Task.WaitAll(
-             Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
-            {
-                var payment = await alice.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
-                    new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
-                if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
                 {
+                    var payment = await alice.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
+                        new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
+                    if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                        Interlocked.Increment(ref success_count);
+                    else
+                        Interlocked.Increment(ref fail_count);
+                }),
+                Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
+                {
+                    var payment = await carol.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
+                        new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
+                    if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
+                        Interlocked.Increment(ref success_count);
+                    else
+                        Interlocked.Increment(ref fail_count);
                     Interlocked.Increment(ref success_count);
-                }
-                else
-                {
-                    Interlocked.Increment(ref fail_count);
-                }
-            }),
-             Parallel.ForAsync(0, threads, cts.Token, async (i, token) =>
-            {
-                var payment = await carol.KeysendPayment(bob.LocalNodePubKey, 1, 100000000, "Hello World", 6,
-                    new Dictionary<ulong, byte[]> { { 99999, new byte[] { 11, 11, 11 } } });
-                if (payment.Status == Payment.Types.PaymentStatus.Succeeded)
-                {
-                    Interlocked.Increment(ref success_count);
-                }
-                else
-                {
-                    Interlocked.Increment(ref fail_count);
-                }
-                Interlocked.Increment(ref success_count);
-            }));
-        }
+                }));
         sw.Stop();
         var attempted_pps = (fail_count + success_count) / (sw.ElapsedMilliseconds / 1000.0);
         $"Attempted Payments: {fail_count + success_count}".Print();
@@ -867,8 +852,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
         size.PrintDump();
         size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
         size.PrintDump();
-
-
     }
 
     [Test]
@@ -906,7 +889,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("LNUnit")]
     [NonParallelizable]
     [Timeout(5000)]
-
     public async Task GetChannelPointFromAliases()
     {
         var data = Builder.GetChannelPointFromAliases("alice", "bob");
@@ -922,7 +904,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
     public async Task GetNodeConnectionFromPool()
     {
         var data = Builder.LNDNodePool.GetLNDNodeConnection();
-        Assert.That(data.IsRPCReady);
+        Assert.That(data.IsRpcReady);
         Assert.That(data.IsServerReady);
         var found = Builder.LNDNodePool.GetLNDNodeConnection(data.LocalNodePubKey);
         Assert.That(data.LocalNodePubKey == found.LocalNodePubKey);
@@ -947,16 +929,17 @@ public abstract class AbcLightningAbstractTests : IDisposable
     {
         var alice = await Builder.GetNodeFromAlias("alice");
         var addresses = new List<string>();
-        var sendManyRequest = new SendManyRequest()
+        var sendManyRequest = new SendManyRequest
         {
             SatPerVbyte = 10,
             Label = "Test send to multiple",
-            SpendUnconfirmed = true,
+            SpendUnconfirmed = true
         };
         //make destinations
-        for (int i = 0; i < 10; i++)
+        for (var i = 0; i < 10; i++)
         {
-            var address = alice.LightningClient.NewAddress(new NewAddressRequest() { Type = AddressType.TaprootPubkey }).Address;
+            var address = alice.LightningClient.NewAddress(new NewAddressRequest { Type = AddressType.TaprootPubkey })
+                .Address;
             addresses.Add(address);
             sendManyRequest.AddrToAmount.Add(address, 10000);
         }
@@ -967,7 +950,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         await Builder.WaitUntilSyncedToChain("alice");
         //verify last address got funds
-        var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest() { MinConfs = 1, MaxConfs = 20 });
+        var unspend = alice.LightningClient.ListUnspent(new ListUnspentRequest { MinConfs = 1, MaxConfs = 20 });
         var confirmedAddresses = new List<string>();
         foreach (var u in unspend.Utxos)
         {
@@ -978,6 +961,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
                 confirmedAddresses.Add(exists);
             }
         }
+
         Assert.That(confirmedAddresses.Count, Is.EqualTo(addresses.Count), "Confirmed deposits doesn't match request.");
     }
 
@@ -986,7 +970,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
     [Category("Invoice")]
     [NonParallelizable]
     [Timeout(5000)]
-
     public async Task FailureInvoiceTimeout()
     {
         var invoice = await Builder.GeneratePaymentRequestFromAlias("alice", new Invoice
@@ -1130,10 +1113,10 @@ public abstract class AbcLightningAbstractTests : IDisposable
 
         //Apply HTLC hold to prevent payment from settling
         var htlcEvents = 0;
-        List<LNDHTLCMonitor> monitors = new();
+        List<LndHtlcMonitor> monitors = new();
         foreach (var n in Builder.LNDNodePool.ReadyNodes.ToImmutableList())
             //This disposes so should use Clone of connection
-            monitors.Add(new LNDHTLCMonitor(n.Clone(), htlc => { htlcEvents++; }));
+            monitors.Add(new LndHtlcMonitor(n.Clone(), htlc => { htlcEvents++; }));
 
 
         await Builder.DelayAllHTLCsOnAlias("alice", 1);
@@ -1226,7 +1209,9 @@ public abstract class AbcLightningAbstractTests : IDisposable
         });
         var finalized = new List<Payment.Types.PaymentStatus>
             { Payment.Types.PaymentStatus.Failed };
-        await foreach (var p in payments.Payments.Where(x => finalized.Contains(x.Status) && x.Htlcs.Any()))
+        var asyncEnumerablePayments = payments.Payments.Where(x => finalized.Contains(x.Status) && x.Htlcs.Any())
+            .ToAsyncEnumerable();
+        await foreach (var p in asyncEnumerablePayments)
         {
             var destinationNode = p.Htlcs.Last().Route.Hops.Last().PubKey;
 
@@ -1268,13 +1253,6 @@ public abstract class AbcLightningAbstractTests : IDisposable
             }
         }
     }
-
-    private readonly MemoryCache _aliasCache = new(new MemoryCacheOptions { SizeLimit = 10000 });
-    protected readonly string _dbType;
-    protected readonly string _lndImage;
-    protected readonly string _tag;
-    protected readonly string _lndRoot;
-    protected readonly bool _pullImage;
 
     private async Task<string> ToAlias(LNDNodeConnection c, string remotePubkey)
     {
@@ -1318,7 +1296,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var bob = await Builder.WaitUntilAliasIsServerReady("bob");
 
         //purge data
-        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest()
+        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest
         {
             AllPayments = true
         });
@@ -1329,7 +1307,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
             {
                 PaymentRequest = invoice.PaymentRequest,
                 FeeLimitSat = 100000000,
-                TimeoutSeconds = 50,
+                TimeoutSeconds = 50
             });
             Assert.That(payment.Status == Payment.Types.PaymentStatus.Succeeded);
         }
@@ -1379,16 +1357,16 @@ public abstract class AbcLightningAbstractTests : IDisposable
         var bob = await Builder.WaitUntilAliasIsServerReady("bob");
 
         //purge data
-        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest()
+        await bob.LightningClient.DeleteAllPaymentsAsync(new DeleteAllPaymentsRequest
         {
-            AllPayments = true,
+            AllPayments = true
         });
 
         var payment = await Builder.MakeLightningPaymentFromAlias("bob", new SendPaymentRequest
         {
             PaymentRequest = invoice.PaymentRequest,
             FeeLimitSat = 100000000,
-            TimeoutSeconds = 5,
+            TimeoutSeconds = 5
         });
         Assert.That(payment.Status == Payment.Types.PaymentStatus.Succeeded);
 

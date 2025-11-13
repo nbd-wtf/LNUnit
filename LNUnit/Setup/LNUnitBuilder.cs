@@ -2,16 +2,16 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
-using Dasync.Collections;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Google.Protobuf;
 using Grpc.Core;
 using Lnrpc;
 using LNUnit.LND;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NBitcoin;
 using NBitcoin.RPC;
-using Org.BouncyCastle.Crypto.Parameters;
 using Routerrpc;
 using ServiceStack;
 using SharpCompress.Readers;
@@ -187,7 +187,7 @@ public class LNUnitBuilder : IDisposable
             {
                 GrpcEndpoint = $"https://{ipAddress}:10009/",
                 MacaroonBase64 = adminMacaroonBase64String,
-                TLSCertBase64 = tlsCertBase64
+                TlsCertBase64 = tlsCertBase64
             };
             //lndSettings.Add(lndConfig);
             foreach (var dependentContainer in n.DependentContainers)
@@ -296,7 +296,7 @@ public class LNUnitBuilder : IDisposable
             {
                 GrpcEndpoint = $"https://{ipAddress}:10009/",
                 MacaroonBase64 = adminMacaroonBase64String,
-                TLSCertBase64 = tlsCertBase64
+                TlsCertBase64 = tlsCertBase64
             });
         }
 
@@ -424,7 +424,7 @@ public class LNUnitBuilder : IDisposable
     public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
     {
         var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(containerId);
-        while (inspectionResponse.State.Running != true)
+        while (!inspectionResponse.State.Running)
         {
             await Task.Delay(250);
             inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(containerId);
@@ -451,7 +451,7 @@ public class LNUnitBuilder : IDisposable
         {
             GrpcEndpoint = $"https://{ipAddress}:10009/",
             MacaroonBase64 = adminMacaroonBase64String,
-            TLSCertBase64 = tlsCertBase64
+            TlsCertBase64 = tlsCertBase64
         };
     }
 
@@ -472,8 +472,8 @@ public class LNUnitBuilder : IDisposable
         }
 
         return null;
-
     }
+
     private async Task<GetArchiveFromContainerResponse?> GetTarStreamFromFS(string containerId, string filePath)
     {
         var foundFile = false;
@@ -564,15 +564,12 @@ public class LNUnitBuilder : IDisposable
         {
             var graph = await GetGraphFromAlias(fromAlias);
             if (graph.Nodes.Count < expectedNodeCount)
-            {
                 await Task.Delay(250); //let the graph sync 
-            }
             else
-            {
                 graphReady = true;
-            }
         }
     }
+
     private static string GetStringFromTar(GetArchiveFromContainerResponse tlsCertResponse)
     {
         using (var stream = tlsCertResponse.Stream)
@@ -644,6 +641,7 @@ public class LNUnitBuilder : IDisposable
                         info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
                         await Task.Delay(250);
                     }
+
                     info = new GetInfoResponse();
                     while (!info.SyncedToChain && !info.SyncedToGraph)
                     {
@@ -651,7 +649,7 @@ public class LNUnitBuilder : IDisposable
                         await Task.Delay(250);
                     }
 
-                    await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
+                    await WaitGraphReady(alias, LNDNodePool.TotalNodes);
                     if (resetChannels)
                     {
                         var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
@@ -664,13 +662,12 @@ public class LNUnitBuilder : IDisposable
                         c.ChannelPoint = channelPoint;
                         //Move things along so it is confirmed
                         await BitcoinRpcClient.GenerateAsync(10);
-                        await this.WaitUntilSyncedToChain(alias);
-                        await this.WaitGraphReady(alias, this.LNDNodePool.TotalNodes);
+                        await WaitUntilSyncedToChain(alias);
+                        await WaitGraphReady(alias, LNDNodePool.TotalNodes);
                         //Set fees & htlcs, TLD
                         var policySet = false;
                         var hitcount = 0;
                         while (!policySet)
-                        {
                             try
                             {
                                 var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
@@ -686,21 +683,17 @@ public class LNUnitBuilder : IDisposable
                                     });
                                 policySet = true;
                             }
-                            catch (Grpc.Core.RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
-                                                                   e.Status.Detail.EqualsIgnoreCase("channel from self node has no policy"))
+                            catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
+                                                         e.Status.Detail.EqualsIgnoreCase(
+                                                             "channel from self node has no policy"))
                             {
                                 if (hitcount == 0)
-                                {
                                     //generate blocks so we do a status update for sure.
                                     await BitcoinRpcClient.GenerateAsync(145);
-
-                                }
 
                                 hitcount++;
                                 await Task.Delay(500); //give it some time
                             }
-                        }
-
                     }
                 }
 
@@ -720,19 +713,24 @@ public class LNUnitBuilder : IDisposable
         Invoice invoice)
     {
         var node = await GetNodeFromAlias(alias);
-        var response = new ConcurrentStack<AddInvoiceResponse>();
-        await Enumerable.Range(0, count).ParallelForEachAsync(async x =>
-        {
-            var invoiceCopy = invoice.Clone();
-            response.Push(await node.LightningClient.AddInvoiceAsync(invoiceCopy));
-        });
+        var response = new ConcurrentBag<AddInvoiceResponse>();
+
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, count),
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            async (x, ct) =>
+            {
+                var invoiceCopy = invoice.Clone();
+                var result = await node.LightningClient.AddInvoiceAsync(invoiceCopy, cancellationToken: ct);
+                response.Add(result);
+            });
         return response.ToList();
     }
 
     public async Task<Payment> LookupPayment(string alias, ByteString hash)
     {
         var node = await GetNodeFromAlias(alias);
-        var streamingCallResponse = node.RouterClient.TrackPaymentV2(new TrackPaymentRequest()
+        var streamingCallResponse = node.RouterClient.TrackPaymentV2(new TrackPaymentRequest
         {
             NoInflightUpdates = true,
             PaymentHash = hash
@@ -741,6 +739,7 @@ public class LNUnitBuilder : IDisposable
         await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
         return paymentResponse!;
     }
+
     public async Task<Invoice?> LookupInvoice(string alias, ByteString rHash)
     {
         var node = await GetNodeFromAlias(alias);
@@ -921,7 +920,7 @@ public static class LNUnitBuilderExtensions
                 @"-zmqpubhashblock=tcp://0.0.0.0:28336",
                 $"-txindex={(txIndex ? "1" : "0")}",
                 @"-dnsseed=0",
-                @"-natpmp=0",  //changed in v30 was upnp=0 now invalid.
+                @"-natpmp=0", //changed in v30 was upnp=0 now invalid.
                 @"-rpcbind=0.0.0.0",
                 @"-rpcallowip=0.0.0.0/0",
                 @"-rpcport=18443",
@@ -945,7 +944,8 @@ public static class LNUnitBuilderExtensions
         string rpcUser = "bitcoin", string rpcPass = "bitcoin", string imageName = "polarlightning/lnd",
         string tagName = "0.17.4-beta", bool acceptKeysend = true, bool pullImage = true, bool mapTotmp = false,
         bool gcInvoiceOnStartup = false, bool gcInvoiceOnFly = false, string? postgresDSN = null,
-        string lndRoot = "/home/lnd/.lnd", bool lndkSupport = false, bool nativeSql = false, bool storeFinalHtlcResolutions = false)
+        string lndRoot = "/home/lnd/.lnd", bool lndkSupport = false, bool nativeSql = false,
+        bool storeFinalHtlcResolutions = false)
     {
         var cmd = new List<string>
         {
@@ -973,11 +973,7 @@ public static class LNUnitBuilderExtensions
             "--gossip.max-channel-update-burst=100",
             "--gossip.channel-update-interval=1s"
         };
-        if (nativeSql)
-        {
-            cmd.Add("--db.use-native-sql");
-
-        }
+        if (nativeSql) cmd.Add("--db.use-native-sql");
         if (lndkSupport) //TODO: must compile LND with 'dev' flags before can play with this
         {
             cmd.Add("--protocol.custom-message=513");
@@ -985,10 +981,7 @@ public static class LNUnitBuilderExtensions
             cmd.Add("--protocol.custom-init=39");
         }
 
-        if (storeFinalHtlcResolutions)
-        {
-            cmd.Add("--store-final-htlc-resolutions");
-        }
+        if (storeFinalHtlcResolutions) cmd.Add("--store-final-htlc-resolutions");
         if (!postgresDSN.IsEmpty())
         {
             cmd.Add("--db.backend=postgres");

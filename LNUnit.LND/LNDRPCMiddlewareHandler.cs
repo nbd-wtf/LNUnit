@@ -1,21 +1,20 @@
 using System.Diagnostics;
 using Grpc.Core;
 using Lnrpc;
-using Routerrpc;
 
 namespace LNUnit.LND;
 
 /// <summary>
 ///     This is a very simple interceptor loop.
 /// </summary>
-public class LNDRPCMiddlewareHandler : IDisposable
+public class LndRpcMiddlewareHandler : IDisposable
 {
     private readonly CancellationTokenSource _cancellationTokenSource = new();
 
     private readonly bool _disposed = false;
     private readonly Task<Task> _task;
 
-    public LNDRPCMiddlewareHandler(LNDNodeConnection connection,
+    public LndRpcMiddlewareHandler(LNDNodeConnection connection,
         Func<RPCMiddlewareRequest, Task<RPCMiddlewareResponse>> interceptLogic)
     {
         Node = connection;
@@ -63,7 +62,7 @@ public class LNDRPCMiddlewareHandler : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }

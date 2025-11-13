@@ -62,7 +62,7 @@ public class LNDSimpleHtlcInterceptorHandler : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }

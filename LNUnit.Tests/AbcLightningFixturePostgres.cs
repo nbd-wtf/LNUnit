@@ -1,11 +1,11 @@
-
+using LNUnit.Tests.Abstract;
 
 namespace LNUnit.Tests.Fixture;
 
 [Ignore("only local")]
 //[TestFixture("postgres", "lightninglabs/lnd", "v0.18.3-beta", "/root/.lnd", true)]
 [TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
-public class AbcLightningAbstractTestsPostgres : LNUnit.Tests.Abstract.AbcLightningAbstractTests
+public class AbcLightningAbstractTestsPostgres : AbcLightningAbstractTests
 {
     public AbcLightningAbstractTestsPostgres(string dbType = "postgres",
         string lndImage = "custom_lnd",
@@ -14,7 +14,5 @@ public class AbcLightningAbstractTestsPostgres : LNUnit.Tests.Abstract.AbcLightn
         bool pullImage = false
     ) : base(dbType, lndImage, tag, lndRoot, pullImage)
     {
-
     }
 }
-

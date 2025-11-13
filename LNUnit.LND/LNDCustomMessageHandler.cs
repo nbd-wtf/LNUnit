@@ -12,7 +12,7 @@ public class LNDCustomMessageHandler
     }
 
     public LNDNodeConnection Node { get; }
-    public event EventHandler<CustomMessage> OnMessage;
+    public event EventHandler<CustomMessage>? OnMessage;
 
     public async Task<SendCustomMessageResponse> SendCustomMessageRequest(CustomMessage m)
     {
@@ -31,7 +31,7 @@ public class LNDCustomMessageHandler
             while (await streamingEvents.ResponseStream.MoveNext())
             {
                 var message = streamingEvents.ResponseStream.Current;
-                OnMessage(Node, message);
+                OnMessage?.Invoke(Node, message);
             }
         }
     }
