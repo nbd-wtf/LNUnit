@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
-        <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
+        <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
-        <Version>2.0.4</Version>
+        <Version>3.0.0</Version>
         <IsPackable>true</IsPackable>
         <PackageId>LNUnit</PackageId>
         <PackageDescription>Lightning Network Unit Testing Framework</PackageDescription>
-        <LangVersion>13.0</LangVersion>
+        <LangVersion>14.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,11 +19,10 @@
         <PackageReference Include="Grpc.Net.Common" Version="2.71.0" />
  
         <PackageReference Include="NBitcoin" Version="9.0.3" />
-        <PackageReference Include="ServiceStack" Version="8.9.0" />
+        <PackageReference Include="ServiceStack" Version="8.10.0" />
         <PackageReference Include="SharpCompress" Version="0.40.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.1" />
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
-        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Text;
-using Dasync.Collections;
+// using Dasync.Collections;
 using Docker.DotNet;
 using Docker.DotNet.Models;
 using Google.Protobuf;
@@ -11,7 +11,7 @@ using Lnrpc;
 using LNUnit.LND;
 using NBitcoin;
 using NBitcoin.RPC;
-using Org.BouncyCastle.Crypto.Parameters;
+// using Org.BouncyCastle.Crypto.Parameters;
 using Routerrpc;
 using ServiceStack;
 using SharpCompress.Readers;
@@ -720,12 +720,17 @@ public class LNUnitBuilder : IDisposable
         Invoice invoice)
     {
         var node = await GetNodeFromAlias(alias);
-        var response = new ConcurrentStack<AddInvoiceResponse>();
-        await Enumerable.Range(0, count).ParallelForEachAsync(async x =>
-        {
-            var invoiceCopy = invoice.Clone();
-            response.Push(await node.LightningClient.AddInvoiceAsync(invoiceCopy));
-        });
+        var response = new ConcurrentBag<AddInvoiceResponse>();
+    
+        await Parallel.ForEachAsync(
+            Enumerable.Range(0, count),
+            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+            async (x, ct) =>
+            {
+                var invoiceCopy = invoice.Clone();
+                var result = await node.LightningClient.AddInvoiceAsync(invoiceCopy, cancellationToken: ct);
+                response.Add(result);
+            });
         return response.ToList();
     }
 

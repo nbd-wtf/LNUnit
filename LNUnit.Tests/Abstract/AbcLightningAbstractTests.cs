@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Security.Cryptography;
-using Dasync.Collections;
+// using Dasync.Collections;
 using Docker.DotNet;
 using Google.Protobuf;
 using Google.Protobuf.Collections;
@@ -1226,7 +1226,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
         });
         var finalized = new List<Payment.Types.PaymentStatus>
             { Payment.Types.PaymentStatus.Failed };
-        await foreach (var p in payments.Payments.Where(x => finalized.Contains(x.Status) && x.Htlcs.Any()))
+        var asyncEnumerablePayments = payments.Payments.Where(x => finalized.Contains(x.Status) && x.Htlcs.Any()).ToAsyncEnumerable();
+        await foreach (var p in asyncEnumerablePayments)
         {
             var destinationNode = p.Htlcs.Last().Route.Hops.Last().PubKey;
 

@@ -34,7 +34,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="ServiceStack" Version="8.9.0" />
+        <PackageReference Include="ServiceStack" Version="8.10.0" />
         <PackageReference Include="SharpCompress" Version="0.41.0" />
 
         <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
