@@ -55,11 +55,14 @@
     <ItemGroup>
         <None Remove="bolt.js"/>
         <EmbeddedResource Include="bolt.js"/>
+        <None Update="appsettings.Development.json">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
     <ItemGroup>
         <None Remove="public\**"/>
         <None Update="appsettings.json">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
 
