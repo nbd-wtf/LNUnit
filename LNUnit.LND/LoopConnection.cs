@@ -19,8 +19,8 @@ public class LoopConnection : IDisposable
     {
         _logger = logger;
         Settings = settings;
-        StartWithBase64(settings.TLSCertBase64 ?? throw new InvalidOperationException(), 
-            settings.MacaroonBase64 ?? throw new InvalidOperationException(), 
+        StartWithBase64(settings.TLSCertBase64 ?? throw new InvalidOperationException(),
+            settings.MacaroonBase64 ?? throw new InvalidOperationException(),
             settings.GrpcEndpoint);
     }
 
@@ -56,7 +56,7 @@ public class LoopConnection : IDisposable
         {
             ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, cetChain, policyErrors) => true
         };
-       // var x509Cert = new X509Certificate2(Convert.FromBase64String(tlsCertBase64));
+        // var x509Cert = new X509Certificate2(Convert.FromBase64String(tlsCertBase64));
         var certBytes = Convert.FromBase64String(tlsCertBase64);
         var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);
 

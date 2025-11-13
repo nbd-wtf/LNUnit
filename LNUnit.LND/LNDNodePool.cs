@@ -214,8 +214,8 @@ public class LNDNodePool : IDisposable
         return ReadyNodes.First();
     }
 
-    
-    
+
+
     /// <summary>
     ///     Takes all members in a pool and will 50/50 balance channels between them via invoice/payment method. only direct
     ///     peers, so 0 fees.
