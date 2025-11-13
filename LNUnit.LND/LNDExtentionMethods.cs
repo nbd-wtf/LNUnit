@@ -44,31 +44,31 @@ public static class LNDExtensions
         return nodes.ConvertAll(x => x.ToLightningNode());
     }
 
-    public static (byte[] data, byte[] iv) EncryptStringToAesBytes(this byte[] ClearData, byte[] Key, byte[] IV)
+    public static (byte[] data, byte[] iv) EncryptStringToAesBytes(this byte[] clearData, byte[] key, byte[]? iv)
     {
         // Check arguments.
-        if (ClearData.Length <= 0)
-            throw new ArgumentNullException("ClearData");
-        if (Key == null || Key.Length <= 0)
-            throw new ArgumentNullException("Key");
+        if (clearData.Length <= 0)
+            throw new ArgumentNullException("clearData");
+        if (key == null || key.Length <= 0)
+            throw new ArgumentNullException("key");
         byte[] encrypted;
         // Create an Aes object
         // with the specified key and IV.
         using (var aesAlg = Aes.Create())
         {
-            aesAlg.Key = Key;
-            if (IV != null)
-                IV = aesAlg.IV;
+            aesAlg.Key = key;
+            if (iv != null)
+                iv = aesAlg.IV;
             aesAlg.Mode = CipherMode.CBC;
             // Create an encryptor to perform the stream transform.
-            IV = aesAlg.IV;
+            iv = aesAlg.IV;
             var encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
             // Create the streams used for encryption.
             using (var msEncrypt = new MemoryStream())
             {
                 using (var csEncrypt = new CryptoStream(msEncrypt, encryptor, CryptoStreamMode.Write))
                 {
-                    csEncrypt.Write(ClearData);
+                    csEncrypt.Write(clearData);
                 }
 
                 encrypted = msEncrypt.ToArray();
@@ -76,7 +76,7 @@ public static class LNDExtensions
         }
 
         // Return the encrypted bytes from the memory stream.
-        return (encrypted, IV);
+        return (encrypted, iv);
     }
 
     public static byte[] DecryptStringFromBytesAes(this byte[] CipherData, byte[] Key, byte[] IV)

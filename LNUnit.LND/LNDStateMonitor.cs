@@ -10,7 +10,7 @@ public class LNDStateMonitor
     private readonly bool _disposed = false;
     private readonly Task<Task> _task;
 
-    public LNDStateMonitor(LNDNodeConnection connection, Action<SubscribeStateResponse> onStateChange = null)
+    public LNDStateMonitor(LNDNodeConnection connection, Action<SubscribeStateResponse>? onStateChange = null)
     {
         Node = connection;
         _task = Task.Factory.StartNew(SubscribeHtlcEventStream, _cancellationTokenSource.Token);
@@ -22,7 +22,7 @@ public class LNDStateMonitor
     public bool Running { get; set; }
 
     public LNDNodeConnection Node { get; }
-    public event Action<SubscribeStateResponse> OnStateChange;
+    public event Action<SubscribeStateResponse>? OnStateChange;
 
     private async Task SubscribeHtlcEventStream()
     {
@@ -34,11 +34,11 @@ public class LNDStateMonitor
                 while (await streamingEvents.ResponseStream.MoveNext())
                 {
                     var state = streamingEvents.ResponseStream.Current;
-                    OnStateChange(state);
+                    OnStateChange?.Invoke(state);
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }

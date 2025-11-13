@@ -62,7 +62,7 @@ public class LNDRPCMiddlewareHandler : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }

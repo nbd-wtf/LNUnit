@@ -62,7 +62,7 @@ public class LNDChannelEventsHandler : IDisposable
                 }
             }
         }
-        catch (Exception e)
+        catch (Exception)
         {
             // do nothing
         }

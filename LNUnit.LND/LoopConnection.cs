@@ -15,6 +15,7 @@ public class LoopConnection : IDisposable
     ///     Constructor auto-start
     /// </summary>
     /// <param name="settings">LND Configuration Settings</param>
+    /// <param name="logger"></param>
     public LoopConnection(LoopSettings settings, ILogger<LoopConnection>? logger = null)
     {
         _logger = logger;
@@ -28,20 +29,20 @@ public class LoopConnection : IDisposable
     public LoopSettings Settings { get; internal set; }
 
     public string Host { get; internal set; }
-    public GrpcChannel gRPCChannel { get; internal set; }
-    public SwapClient.SwapClientClient SwapClient { get; set; }
+    private GrpcChannel GRpcChannel { get; set; }
+    public required SwapClient.SwapClientClient SwapClient { get; set; }
 
     public void Dispose()
     {
-        gRPCChannel.Dispose();
+        GRpcChannel.Dispose();
     }
 
 
     public void StartWithBase64(string tlsCertBase64, string macaroonBase64, string host)
     {
         Host = host;
-        gRPCChannel = CreateGrpcConnection(host, tlsCertBase64, macaroonBase64);
-        SwapClient = new SwapClient.SwapClientClient(gRPCChannel);
+        GRpcChannel = CreateGrpcConnection(host, tlsCertBase64, macaroonBase64);
+        SwapClient = new SwapClient.SwapClientClient(GRpcChannel);
         _logger?.LogDebug("Setup Loop gRPC with {Host}", host);
     }
 
@@ -54,9 +55,8 @@ public class LoopConnection : IDisposable
         Environment.SetEnvironmentVariable("GRPC_SSL_CIPHER_SUITES", "HIGH+ECDSA");
         var httpClientHandler = new HttpClientHandler
         {
-            ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, cetChain, policyErrors) => true
+            ServerCertificateCustomValidationCallback = (_, _, _, policyErrors) => true
         };
-        // var x509Cert = new X509Certificate2(Convert.FromBase64String(tlsCertBase64));
         var certBytes = Convert.FromBase64String(tlsCertBase64);
         var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);
 

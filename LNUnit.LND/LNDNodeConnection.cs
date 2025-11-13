@@ -20,17 +20,19 @@ namespace LNUnit.LND;
 public class LNDNodeConnection : IDisposable
 {
     private readonly ILogger<LNDNodeConnection>? _logger;
-    private Random r = new();
 
     /// <summary>
     ///     Constructor auto-start
     /// </summary>
     /// <param name="settings">LND Configuration Settings</param>
+    /// <param name="logger"></param>
     public LNDNodeConnection(LNDSettings settings, ILogger<LNDNodeConnection>? logger = null)
     {
         _logger = logger;
         Settings = settings;
-        StartWithBase64(settings.TLSCertBase64, settings.MacaroonBase64, settings.GrpcEndpoint);
+        StartWithBase64(settings.TLSCertBase64 ?? throw new InvalidOperationException(),
+            settings.MacaroonBase64 ?? throw new InvalidOperationException(),
+            settings.GrpcEndpoint);
     }
 
 
@@ -115,7 +117,6 @@ public class LNDNodeConnection : IDisposable
         {
             ServerCertificateCustomValidationCallback = (httpRequestMessage, cert, cetChain, policyErrors) => true
         };
-        //var x509Cert = new X509Certificate2(Convert.FromBase64String(TLSCertBase64));
         var certBytes = Convert.FromBase64String(tlsCertBase64);
         var x509Cert = X509CertificateLoader.LoadCertificate(certBytes);
 
@@ -151,11 +152,13 @@ public class LNDNodeConnection : IDisposable
             var res = StateClient.GetState(new GetStateRequest(), null, DateTime.UtcNow.AddSeconds(timeOutSeconds));
             return res.State;
         }
-        catch (RpcException e)
+        catch (RpcException)
         {
+            // ignored
         }
-        catch (Exception e)
+        catch (Exception)
         {
+            // ignored
         }
 
         return WalletState.NonExisting;
@@ -190,7 +193,7 @@ public class LNDNodeConnection : IDisposable
             payment.DestCustomRecords.Add(34349334,
                 ByteString.CopyFrom(Encoding.Default.GetBytes(message))); //message type
         var streamingCallResponse = RouterClient.SendPaymentV2(payment);
-        Payment paymentResponse = null;
+        Payment? paymentResponse = null;
         await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
         return paymentResponse;
     }
