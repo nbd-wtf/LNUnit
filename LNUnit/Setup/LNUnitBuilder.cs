@@ -721,7 +721,7 @@ public class LNUnitBuilder : IDisposable
     {
         var node = await GetNodeFromAlias(alias);
         var response = new ConcurrentBag<AddInvoiceResponse>();
-    
+
         await Parallel.ForEachAsync(
             Enumerable.Range(0, count),
             new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
