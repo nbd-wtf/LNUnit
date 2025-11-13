@@ -28,7 +28,12 @@ public class LoopConnection : IDisposable
 
     public string Host { get; internal set; }
     public GrpcChannel gRPCChannel { get; internal set; }
-    public Looprpc.SwapClient.SwapClientClient SwapClient { get; set; }
+    public SwapClient.SwapClientClient SwapClient { get; set; }
+
+    public void Dispose()
+    {
+        gRPCChannel.Dispose();
+    }
 
 
     public void StartWithBase64(string tlsCertBase64, string macaroonBase64, string host)
@@ -75,10 +80,5 @@ public class LoopConnection : IDisposable
                 MaxSendMessageSize = 128000000
             });
         return grpcChannel;
-    }
-
-    public void Dispose()
-    {
-        gRPCChannel.Dispose();
     }
 }

@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Grpc.Core;
 using Lnrpc;
-using Routerrpc;
 
 namespace LNUnit.LND;
 
@@ -14,7 +13,6 @@ public class LNDChannelEventsHandler : IDisposable
 
     private readonly bool _disposed = false;
     private readonly Task<Task> _task;
-    public LNDNodeConnection Node { get; }
 
     public LNDChannelEventsHandler(LNDNodeConnection connection,
         Action<ChannelEventUpdate> onChannelEvent)
@@ -26,6 +24,8 @@ public class LNDChannelEventsHandler : IDisposable
         while (!Running)
             Task.Delay(100).GetAwaiter().GetResult();
     }
+
+    public LNDNodeConnection Node { get; }
 
     public bool Running { get; private set; }
     public ulong InterceptCount { get; private set; }
@@ -41,19 +41,15 @@ public class LNDChannelEventsHandler : IDisposable
         }
     }
 
-    public event Action<Lnrpc.ChannelEventUpdate> OnChannelEvent;
+    public event Action<ChannelEventUpdate> OnChannelEvent;
 
     private async Task StartListening()
     {
         Debug.Print($"StartListening: {Node.LocalAlias}");
         try
         {
-
             using (var streamingEvents =
-                   Node.LightningClient.SubscribeChannelEvents(new ChannelEventSubscription()
-                   {
-
-                   }))
+                   Node.LightningClient.SubscribeChannelEvents(new ChannelEventSubscription()))
             {
                 Running = true;
                 while (await streamingEvents.ResponseStream.MoveNext().ConfigureAwait(false))
@@ -73,7 +69,6 @@ public class LNDChannelEventsHandler : IDisposable
 
         Running = false;
     }
-
 
 
     public void Cancel()

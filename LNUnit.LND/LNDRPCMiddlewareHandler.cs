@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Grpc.Core;
 using Lnrpc;
-using Routerrpc;
 
 namespace LNUnit.LND;
 

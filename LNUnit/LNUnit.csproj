@@ -13,11 +13,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Google.Protobuf" Version="3.33.1" />
-        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0" />
-        <PackageReference Include="NBitcoin" Version="9.0.3" />
-        <PackageReference Include="ServiceStack" Version="8.10.0" />
-        <PackageReference Include="SharpCompress" Version="0.40.0" />
+        <PackageReference Include="Google.Protobuf" Version="3.33.1"/>
+        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0"/>
+        <PackageReference Include="NBitcoin" Version="9.0.3"/>
+        <PackageReference Include="ServiceStack" Version="8.10.0"/>
+        <PackageReference Include="SharpCompress" Version="0.40.0"/>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
     </ItemGroup>
 

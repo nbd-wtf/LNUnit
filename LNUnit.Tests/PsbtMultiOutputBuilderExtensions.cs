@@ -6,7 +6,7 @@ namespace LNUnit.Tests;
 public static class PsbtMultiOutputBuilderExtensions
 {
     /// <summary>
-    /// Creates a PSBT template with n outputs to the same destination address, no inputs
+    ///     Creates a PSBT template with n outputs to the same destination address, no inputs
     /// </summary>
     public static async Task<string> CreateMultiOutputPsbt(this RPCClient rpcClient,
         string destinationAddress,
@@ -41,9 +41,9 @@ public static class PsbtMultiOutputBuilderExtensions
 
         // Write each output
         var scriptBytes = scriptPubKey.ToBytes();
-        var satoshis = (ulong)(amountPerOutput);
+        var satoshis = (ulong)amountPerOutput;
 
-        for (int i = 0; i < numberOfOutputs; i++)
+        for (var i = 0; i < numberOfOutputs; i++)
         {
             // Amount in satoshis (8 bytes, little-endian)
             writer.Write(satoshis);

@@ -6,7 +6,6 @@ using LNBolt.BOLT11;
 using NLightning.Bolt11.Models;
 using NUnit.Framework;
 using org.ldk.structs;
-using ServiceStack;
 using ServiceStack.Text;
 
 namespace LNBolt.Tests;
@@ -34,8 +33,8 @@ public class Bech32Tests
             Assert.AreEqual(Convert.ToHexString(y), "0687B0469281CE20D1AC70D85DD6855CECA1726E9525DF81643039FBBFF4427F");
             //Console.WriteLine($"{i}");
         }
-        $"{10000.0 / sw.Elapsed.TotalSeconds} decodes/sec".Print();
 
+        $"{10000.0 / sw.Elapsed.TotalSeconds} decodes/sec".Print();
     }
 
     [Test]
@@ -47,7 +46,8 @@ public class Bech32Tests
         for (var i = 0; i < 10000; i++)
         {
             var bolt11 = Invoice.Decode(invoice);
-            Assert.AreEqual("7F42F4BFFB39306481DF25956E72A1EC5C85D65DD870ACD120CE819246B08706", Convert.ToHexString(bolt11.PaymentHash.ToBytes()));
+            Assert.AreEqual("7F42F4BFFB39306481DF25956E72A1EC5C85D65DD870ACD120CE819246B08706",
+                Convert.ToHexString(bolt11.PaymentHash.ToBytes()));
             //Console.WriteLine($"{i}");
         }
 
