@@ -196,7 +196,8 @@ public class LNDNodeConnection : IDisposable
                 ByteString.CopyFrom(Encoding.Default.GetBytes(message))); //message type
         var streamingCallResponse = RouterClient.SendPaymentV2(payment);
         Payment? paymentResponse = null;
-        await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
+        await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync().ConfigureAwait(false))
+            paymentResponse = res;
         return paymentResponse;
     }
 

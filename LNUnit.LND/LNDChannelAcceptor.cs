@@ -49,11 +49,12 @@ public class LNDChannelAcceptor : IDisposable
             using (var channelAcceptor = Node.LightningClient.ChannelAcceptor())
             {
                 Running = true;
-                while (await channelAcceptor.ResponseStream.MoveNext(_cancellationTokenSource.Token))
+                while (await channelAcceptor.ResponseStream.MoveNext(_cancellationTokenSource.Token)
+                           .ConfigureAwait(false))
                 {
                     var message = channelAcceptor.ResponseStream.Current;
                     var result = OnChannelRequest(message);
-                    await channelAcceptor.RequestStream.WriteAsync(await result);
+                    await channelAcceptor.RequestStream.WriteAsync(await result).ConfigureAwait(false);
                 }
             }
         }

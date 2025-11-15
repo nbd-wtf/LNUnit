@@ -57,7 +57,7 @@ public class LNUnitBuilder : IDisposable
 
     public static async Task<LNUnitBuilder> LoadConfigurationFile(string path)
     {
-        var data = await File.ReadAllTextAsync(path);
+        var data = await File.ReadAllTextAsync(path).ConfigureAwait(false);
         return new LNUnitBuilder(LoadConfiguration(data));
     }
 
@@ -79,20 +79,21 @@ public class LNUnitBuilder : IDisposable
         foreach (var n in Configuration.BTCNodes.Where(x => !x.DockerContainerId.IsEmpty()))
         {
             var result = await _dockerClient.Containers.StopContainerAsync(n.DockerContainerId,
-                new ContainerStopParameters { WaitBeforeKillSeconds = 1 });
+                new ContainerStopParameters { WaitBeforeKillSeconds = 1 }).ConfigureAwait(false);
             await _dockerClient.Containers.RemoveContainerAsync(n.DockerContainerId,
-                new ContainerRemoveParameters { Force = true, RemoveVolumes = true });
+                new ContainerRemoveParameters { Force = true, RemoveVolumes = true }).ConfigureAwait(false);
         }
 
         foreach (var n in Configuration.LNDNodes.Where(x => !x.DockerContainerId.IsEmpty()))
         {
             var result = await _dockerClient.Containers.StopContainerAsync(n.DockerContainerId,
-                new ContainerStopParameters { WaitBeforeKillSeconds = 1 });
+                new ContainerStopParameters { WaitBeforeKillSeconds = 1 }).ConfigureAwait(false);
             await _dockerClient.Containers.RemoveContainerAsync(n.DockerContainerId,
-                new ContainerRemoveParameters { Force = true, RemoveVolumes = true });
+                new ContainerRemoveParameters { Force = true, RemoveVolumes = true }).ConfigureAwait(false);
         }
 
-        if (destoryNetwork) await _dockerClient.Networks.DeleteNetworkAsync(Configuration.DockerNetworkId);
+        if (destoryNetwork)
+            await _dockerClient.Networks.DeleteNetworkAsync(Configuration.DockerNetworkId).ConfigureAwait(false);
         IsDestoryed = true;
     }
 
@@ -110,14 +111,15 @@ public class LNUnitBuilder : IDisposable
 
         //Setup network
         if (setupNetwork)
-            Configuration.DockerNetworkId = await _dockerClient.BuildTestingNetwork(Configuration.BaseName);
+            Configuration.DockerNetworkId =
+                await _dockerClient.BuildTestingNetwork(Configuration.BaseName).ConfigureAwait(false);
 
         //Setup BTC Nodes
 
         ContainerListResponse bitcoinNode;
         foreach (var n in Configuration.BTCNodes) //TODO: can do multiple at once
         {
-            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag);
+            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag).ConfigureAwait(false);
             var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
             {
                 Image = $"{n.Image}:{n.Tag}",
@@ -128,13 +130,15 @@ public class LNUnitBuilder : IDisposable
                 Name = n.Name,
                 Hostname = n.Name,
                 Cmd = n.Cmd
-            });
+            }).ConfigureAwait(false);
             n.DockerContainerId = nodeContainer.ID;
             var success =
-                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
-            await Task.Delay(500);
+                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters())
+                    .ConfigureAwait(false);
+            //await Task.Delay(500).ConfigureAwait(false);
             //Setup wallet and basic funds
-            var listContainers = await _dockerClient.Containers.ListContainersAsync(new ContainersListParameters());
+            var listContainers = await _dockerClient.Containers.ListContainersAsync(new ContainersListParameters())
+                .ConfigureAwait(false);
             bitcoinNode = listContainers.First(x => x.ID == nodeContainer.ID);
             BitcoinRpcClient = new RPCClient("bitcoin:bitcoin",
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
@@ -142,8 +146,9 @@ public class LNUnitBuilder : IDisposable
             BitcoinRpcClient.HttpClient = new HttpClient
             { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
 
-            await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true });
-            var utxos = await BitcoinRpcClient.GenerateAsync(200);
+            await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true })
+                .ConfigureAwait(false);
+            var utxos = await BitcoinRpcClient.GenerateAsync(200).ConfigureAwait(false);
         }
 
 
@@ -153,7 +158,7 @@ public class LNUnitBuilder : IDisposable
         if (Configuration.LoopServer != null)
         {
             var n = Configuration.LoopServer;
-            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag);
+            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag).ConfigureAwait(false);
             var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
             {
                 Image = $"{n.Image}:{n.Tag}",
@@ -165,23 +170,25 @@ public class LNUnitBuilder : IDisposable
                 Name = n.Name,
                 Hostname = n.Name,
                 Cmd = n.Cmd
-            });
+            }).ConfigureAwait(false);
             n.DockerContainerId = nodeContainer.ID;
             var success =
-                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
-            var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
+                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters())
+                    .ConfigureAwait(false);
+            var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId)
+                .ConfigureAwait(false);
             var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
 
-            var txt = await GetStringFromFS(n.DockerContainerId, $"{lndRoot}/tls.cert");
+            var txt = await GetStringFromFS(n.DockerContainerId, $"{lndRoot}/tls.cert").ConfigureAwait(false);
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
             var data = await GetBytesFromFS(n.DockerContainerId,
-                $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
+                $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon").ConfigureAwait(false);
             var adminMacaroonBase64String = Convert.ToBase64String(data);
 
 
             var adminMacaroonTar =
                 await GetTarStreamFromFS(n.DockerContainerId,
-                    $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
+                    $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon").ConfigureAwait(false);
 
             var lndConfig = new LNDSettings
             {
@@ -193,7 +200,8 @@ public class LNUnitBuilder : IDisposable
             foreach (var dependentContainer in n.DependentContainers)
             {
                 if (dependentContainer.PullImage)
-                    await _dockerClient.PullImageAndWaitForCompleted(dependentContainer.Image, dependentContainer.Tag);
+                    await _dockerClient.PullImageAndWaitForCompleted(dependentContainer.Image, dependentContainer.Tag)
+                        .ConfigureAwait(false);
 
                 loopServer = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
                 {
@@ -208,7 +216,7 @@ public class LNUnitBuilder : IDisposable
                     Hostname = dependentContainer.Name,
                     Cmd = dependentContainer.Cmd,
                     ExposedPorts = dependentContainer.ExposedPorts
-                });
+                }).ConfigureAwait(false);
                 dependentContainer.DockerContainerId = nodeContainer.ID;
                 var dataReadonly = await GetBytesFromFS(n.DockerContainerId,
                     $"{lndRoot}/data/chain/bitcoin/regtest/readonly.macaroon");
@@ -241,14 +249,14 @@ public class LNUnitBuilder : IDisposable
                     router);
                 var success2 =
                     await _dockerClient.Containers.StartContainerAsync(loopServer?.ID,
-                        new ContainerStartParameters());
+                        new ContainerStartParameters()).ConfigureAwait(false);
             }
         }
 
         //Setup LND Nodes
         foreach (var n in Configuration.LNDNodes) //TODO: can do multiple at once
         {
-            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag);
+            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag).ConfigureAwait(false);
             var createContainerParameters = new CreateContainerParameters
             {
                 Image = $"{n.Image}:{n.Tag}",
@@ -262,7 +270,8 @@ public class LNUnitBuilder : IDisposable
                 Cmd = n.Cmd
             };
             if (n.Binds.Any()) createContainerParameters.HostConfig.Binds = n.Binds;
-            var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(createContainerParameters);
+            var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(createContainerParameters)
+                .ConfigureAwait(false);
             n.DockerContainerId = nodeContainer.ID;
             var success =
                 await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
@@ -271,7 +280,8 @@ public class LNUnitBuilder : IDisposable
             ContainerInspectResponse? inspectionResponse = null;
             while (ipAddress.IsEmpty())
             {
-                inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId);
+                inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId)
+                    .ConfigureAwait(false);
                 ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
             }
 
@@ -280,10 +290,10 @@ public class LNUnitBuilder : IDisposable
                     ? lndRoot
                     : "/root/lnd/.lnd"; // "/home/lnd/.lnd" : "/root/lnd/.lnd";
             if (n.Image.Contains("lightning-terminal")) await Task.Delay(2000);
-            var txt = await GetStringFromFS(n.DockerContainerId, $"{basePath}/tls.cert");
+            var txt = await GetStringFromFS(n.DockerContainerId, $"{basePath}/tls.cert").ConfigureAwait(false);
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
             var data = await GetBytesFromFS(n.DockerContainerId,
-                $"{basePath}/data/chain/bitcoin/regtest/admin.macaroon");
+                $"{basePath}/data/chain/bitcoin/regtest/admin.macaroon").ConfigureAwait(false);
             var adminMacaroonBase64String = Convert.ToBase64String(data);
 
 
@@ -314,7 +324,7 @@ public class LNUnitBuilder : IDisposable
                 : new LNDNodePool(lndSettings, 1);
             while (LNDNodePool.ReadyNodes.Count < Configuration.LNDNodes.Count)
             {
-                await Task.Delay(250);
+                await Task.Delay(250).ConfigureAwait(false);
                 if (cancelSource.IsCancellationRequested) throw new Exception("CANCELED");
             }
 
@@ -322,7 +332,7 @@ public class LNUnitBuilder : IDisposable
             foreach (var localNode in LNDNodePool.ReadyNodes.ToImmutableList())
             {
                 var remotes = LNDNodePool.ReadyNodes.Where(x => x.LocalAlias != localNode.LocalAlias).ToImmutableList();
-                foreach (var remoteNode in remotes) await ConnectPeers(localNode, remoteNode);
+                foreach (var remoteNode in remotes) await ConnectPeers(localNode, remoteNode).ConfigureAwait(false);
             }
 
             while (LNDNodePool.ReadyNodes.Count < Configuration.LNDNodes.Count)
@@ -341,13 +351,13 @@ public class LNUnitBuilder : IDisposable
                     Type = AddressType.UnusedWitnessPubkeyHash
                 });
                 //Fund
-                await BitcoinRpcClient.GenerateAsync(1);
+                await BitcoinRpcClient.GenerateAsync(1).ConfigureAwait(false);
 
                 BitcoinRpcClient.SendToAddress(BitcoinAddress.Create(newAddressResponse.Address, Network.RegTest),
                     Money.Parse("42.69"));
                 BitcoinRpcClient.SendToAddress(BitcoinAddress.Create(newAddressResponse.Address, Network.RegTest),
                     Money.Parse("42.69"));
-                await BitcoinRpcClient.GenerateAsync(1);
+                await BitcoinRpcClient.GenerateAsync(1).ConfigureAwait(false);
 
                 foreach (var c in n.Channels)
                 {
@@ -360,7 +370,7 @@ public class LNUnitBuilder : IDisposable
 
                     //Connect Peers
                     //We are doing this above now
-                    ConnectPeers(node, remoteNode);
+                    await ConnectPeers(node, remoteNode).ConfigureAwait(false);
 
                     //Wait until we are synced to the chain so we know we have funds secured to send
                     await WaitUntilSyncedToChain(node);
@@ -374,8 +384,8 @@ public class LNUnitBuilder : IDisposable
                     });
                     c.ChannelPoint = channelPoint;
                     //Move things along so it is confirmed
-                    await BitcoinRpcClient.GenerateAsync(10);
-                    await WaitUntilSyncedToChain(node);
+                    await BitcoinRpcClient.GenerateAsync(10).ConfigureAwait(false);
+                    await WaitUntilSyncedToChain(node).ConfigureAwait(false);
                     var setFeesWorked = false;
                     while (!setFeesWorked)
                         try
@@ -391,7 +401,7 @@ public class LNUnitBuilder : IDisposable
                                     MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
                                     MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
                                     TimeLockDelta = c.TimeLockDelta
-                                });
+                                }).ConfigureAwait(false);
                             setFeesWorked = true;
                         }
                         catch (Exception e)
@@ -412,22 +422,24 @@ public class LNUnitBuilder : IDisposable
         while (!info.SyncedToChain)
         {
             await Task.Delay(100);
-            info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
+            info = await node.LightningClient.GetInfoAsync(new GetInfoRequest()).ConfigureAwait(false);
         }
     }
 
     public async Task WaitUntilSyncedToChain(string alias)
     {
-        await WaitUntilSyncedToChain(await GetNodeFromAlias(alias));
+        await WaitUntilSyncedToChain(await GetNodeFromAlias(alias).ConfigureAwait(false)).ConfigureAwait(false);
     }
 
     public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
     {
-        var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(containerId);
+        var inspectionResponse =
+            await _dockerClient.Containers.InspectContainerAsync(containerId).ConfigureAwait(false);
         while (!inspectionResponse.State.Running)
         {
             await Task.Delay(250);
-            inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(containerId);
+            inspectionResponse =
+                await _dockerClient.Containers.InspectContainerAsync(containerId).ConfigureAwait(false);
         }
 
         var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
@@ -437,12 +449,13 @@ public class LNUnitBuilder : IDisposable
         //Wait until LND actually has files started
 
 
-        var tlsTar = await GetTarStreamFromFS(containerId, $"{lndRoot}/tls.cert");
+        var tlsTar = await GetTarStreamFromFS(containerId, $"{lndRoot}/tls.cert").ConfigureAwait(false);
         var txt = GetStringFromTar(tlsTar); //GetStringFromFS(containerId, "/home/lnd/.lnd/tls.cert");
         var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
 
         var adminMacaroonTar =
-            await GetTarStreamFromFS(containerId, $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon");
+            await GetTarStreamFromFS(containerId, $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon")
+                .ConfigureAwait(false);
         var data = GetBytesFromTar(
             adminMacaroonTar);
         var adminMacaroonBase64String = Convert.ToBase64String(data);
@@ -464,7 +477,7 @@ public class LNUnitBuilder : IDisposable
                 new GetArchiveFromContainerParameters
                 {
                     Path = filePath
-                }, true);
+                }, true).ConfigureAwait(false);
             return archResponse.Stat;
         }
         catch (Exception e)
@@ -486,14 +499,14 @@ public class LNUnitBuilder : IDisposable
                     new GetArchiveFromContainerParameters
                     {
                         Path = filePath
-                    }, false);
+                    }, false).ConfigureAwait(false);
                 return archResponse;
             }
             catch (Exception e)
             {
             }
 
-            await Task.Delay(100);
+            await Task.Delay(100).ConfigureAwait(false);
         }
 
         return null;
@@ -505,19 +518,19 @@ public class LNUnitBuilder : IDisposable
         {
             //  AllowOverwriteDirWithFile = true,
             Path = filePath
-        }, stream);
+        }, stream).ConfigureAwait(false);
 
         return true;
     }
 
     private async Task<byte[]> GetBytesFromFS(string containerId, string filePath)
     {
-        return GetBytesFromTar(await GetTarStreamFromFS(containerId, filePath));
+        return GetBytesFromTar(await GetTarStreamFromFS(containerId, filePath).ConfigureAwait(false));
     }
 
     private async Task<string> GetStringFromFS(string containerId, string filePath)
     {
-        return GetStringFromTar(await GetTarStreamFromFS(containerId, filePath));
+        return GetStringFromTar(await GetTarStreamFromFS(containerId, filePath).ConfigureAwait(false));
     }
 
     private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode)
@@ -562,7 +575,7 @@ public class LNUnitBuilder : IDisposable
         var graphReady = false;
         while (!graphReady)
         {
-            var graph = await GetGraphFromAlias(fromAlias);
+            var graph = await GetGraphFromAlias(fromAlias).ConfigureAwait(false);
             if (graph.Nodes.Count < expectedNodeCount)
                 await Task.Delay(250); //let the graph sync 
             else
@@ -588,7 +601,7 @@ public class LNUnitBuilder : IDisposable
 
     private static byte[] GetBytesFromTar(GetArchiveFromContainerResponse tlsCertResponse)
     {
-        using (var stream = tlsCertResponse.Stream)
+        using (var stream = tlsCertResponse.Stream.CopyToNewMemoryStream())
         {
             var reader = ReaderFactory.Open(stream, new ReaderOptions { LookForHeader = true });
             while (reader.MoveToNextEntry())
@@ -609,7 +622,7 @@ public class LNUnitBuilder : IDisposable
         return await _dockerClient.Containers.StopContainerAsync(alias, new ContainerStopParameters
         {
             WaitBeforeKillSeconds = waitBeforeKillSeconds
-        });
+        }).ConfigureAwait(false);
     }
 
     public async Task RestartByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false,
@@ -618,13 +631,13 @@ public class LNUnitBuilder : IDisposable
         await _dockerClient.Containers.RestartContainerAsync(alias, new ContainerRestartParameters
         {
             WaitBeforeKillSeconds = waitBeforeKillSeconds
-        });
+        }).ConfigureAwait(false);
 
         if (isLND)
         {
             LNDNodePool?.AddNode(await GetLNDSettingsFromContainer(alias, lndRoot));
 
-            var node = await WaitUntilAliasIsServerReady(alias);
+            var node = await WaitUntilAliasIsServerReady(alias).ConfigureAwait(false);
             //reset channels
             foreach (var nodes in Configuration.LNDNodes.Where(x => x.Name == alias))
                 foreach (var c in nodes.Channels)
@@ -632,24 +645,24 @@ public class LNUnitBuilder : IDisposable
                     var remoteNode = LNDNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
                     //Connect Peers
                     //We are doing this above now
-                    ConnectPeers(node, remoteNode);
+                    await ConnectPeers(node, remoteNode).ConfigureAwait(false);
 
                     //Wait until we are synced to the chain so we know we have funds secured to send
                     var info = new GetInfoResponse();
                     while (!info.SyncedToChain && !info.SyncedToGraph)
                     {
-                        info = await node.LightningClient.GetInfoAsync(new GetInfoRequest());
+                        info = await node.LightningClient.GetInfoAsync(new GetInfoRequest()).ConfigureAwait(false);
                         await Task.Delay(250);
                     }
 
                     info = new GetInfoResponse();
                     while (!info.SyncedToChain && !info.SyncedToGraph)
                     {
-                        info = await remoteNode.LightningClient.GetInfoAsync(new GetInfoRequest());
+                        info = await remoteNode.LightningClient.GetInfoAsync(new GetInfoRequest()).ConfigureAwait(false);
                         await Task.Delay(250);
                     }
 
-                    await WaitGraphReady(alias, LNDNodePool.TotalNodes);
+                    await WaitGraphReady(alias, LNDNodePool.TotalNodes).ConfigureAwait(false);
                     if (resetChannels)
                     {
                         var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
@@ -658,12 +671,12 @@ public class LNUnitBuilder : IDisposable
                             SatPerVbyte = 10,
                             LocalFundingAmount = c.ChannelSize,
                             PushSat = c.RemotePushOnStart
-                        });
+                        }).ConfigureAwait(false);
                         c.ChannelPoint = channelPoint;
                         //Move things along so it is confirmed
-                        await BitcoinRpcClient.GenerateAsync(10);
-                        await WaitUntilSyncedToChain(alias);
-                        await WaitGraphReady(alias, LNDNodePool.TotalNodes);
+                        await BitcoinRpcClient.GenerateAsync(10).ConfigureAwait(false);
+                        await WaitUntilSyncedToChain(alias).ConfigureAwait(false);
+                        await WaitGraphReady(alias, LNDNodePool.TotalNodes).ConfigureAwait(false);
                         //Set fees & htlcs, TLD
                         var policySet = false;
                         var hitcount = 0;
@@ -680,7 +693,7 @@ public class LNUnitBuilder : IDisposable
                                         MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
                                         MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
                                         TimeLockDelta = c.TimeLockDelta
-                                    });
+                                    }).ConfigureAwait(false);
                                 policySet = true;
                             }
                             catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
@@ -689,21 +702,21 @@ public class LNUnitBuilder : IDisposable
                             {
                                 if (hitcount == 0)
                                     //generate blocks so we do a status update for sure.
-                                    await BitcoinRpcClient.GenerateAsync(145);
+                                    await BitcoinRpcClient.GenerateAsync(145).ConfigureAwait(false);
 
                                 hitcount++;
-                                await Task.Delay(500); //give it some time
+                                await Task.Delay(500).ConfigureAwait(false); //give it some time
                             }
                     }
                 }
 
-            await Task.Delay(2500);
+            //   await Task.Delay(2500).ConfigureAwait(false);
         }
     }
 
     public async Task<AddInvoiceResponse> GeneratePaymentRequestFromAlias(string alias, Invoice invoice)
     {
-        return (await GeneratePaymentsRequestFromAlias(alias, 1, invoice)).First();
+        return (await GeneratePaymentsRequestFromAlias(alias, 1, invoice).ConfigureAwait(false)).First();
         // var node = GetNodeFromAlias(alias);
         // var response = await node.LightningClient.AddInvoiceAsync(invoice);
         // return response;
@@ -712,7 +725,7 @@ public class LNUnitBuilder : IDisposable
     public async Task<List<AddInvoiceResponse>> GeneratePaymentsRequestFromAlias(string alias, int count,
         Invoice invoice)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
         var response = new ConcurrentBag<AddInvoiceResponse>();
 
         await Parallel.ForEachAsync(
@@ -721,7 +734,8 @@ public class LNUnitBuilder : IDisposable
             async (x, ct) =>
             {
                 var invoiceCopy = invoice.Clone();
-                var result = await node.LightningClient.AddInvoiceAsync(invoiceCopy, cancellationToken: ct);
+                var result = await node.LightningClient.AddInvoiceAsync(invoiceCopy, cancellationToken: ct)
+                    .ConfigureAwait(false);
                 response.Add(result);
             });
         return response.ToList();
@@ -736,14 +750,16 @@ public class LNUnitBuilder : IDisposable
             PaymentHash = hash
         });
         Payment? paymentResponse = null;
-        await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
+        await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync().ConfigureAwait(false))
+            paymentResponse = res;
         return paymentResponse!;
     }
 
     public async Task<Invoice?> LookupInvoice(string alias, ByteString rHash)
     {
-        var node = await GetNodeFromAlias(alias);
-        var response = await node.LightningClient.LookupInvoiceAsync(new PaymentHash { RHash = rHash });
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
+        var response = await node.LightningClient.LookupInvoiceAsync(new PaymentHash { RHash = rHash })
+            .ConfigureAwait(false);
         return response;
     }
 
@@ -767,29 +783,30 @@ public class LNUnitBuilder : IDisposable
             await Task.Delay(100);
         }
 
-        while (!ready.IsServerReady) await Task.Delay(100);
+        while (!ready.IsServerReady) await Task.Delay(100).ConfigureAwait(false);
         return ready.Clone();
     }
 
     public async Task<ChannelGraph> GetGraphFromAlias(string alias)
     {
-        var node = await GetNodeFromAlias(alias);
-        return await node.LightningClient.DescribeGraphAsync(new ChannelGraphRequest());
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
+        return await node.LightningClient.DescribeGraphAsync(new ChannelGraphRequest()).ConfigureAwait(false);
     }
 
     public async Task<ListChannelsResponse> GetChannelsFromAlias(string alias)
     {
-        var node = await GetNodeFromAlias(alias);
-        return await node.LightningClient.ListChannelsAsync(new ListChannelsRequest());
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
+        return await node.LightningClient.ListChannelsAsync(new ListChannelsRequest()).ConfigureAwait(false);
     }
 
     public async Task<Payment?> MakeLightningPaymentFromAlias(string alias, SendPaymentRequest request)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
         request.NoInflightUpdates = true;
         var streamingCallResponse = node.RouterClient.SendPaymentV2(request);
         Payment? paymentResponse = null;
-        await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync()) paymentResponse = res;
+        await foreach (var res in streamingCallResponse.ResponseStream.ReadAllAsync().ConfigureAwait(false))
+            paymentResponse = res;
         return paymentResponse;
     }
 
@@ -797,7 +814,7 @@ public class LNUnitBuilder : IDisposable
     public async Task<bool> IsInterceptorActiveForAlias(string alias)
     {
         if (!InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor doesn't exist");
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
         return InterceptorHandlers[alias].Running;
     }
 
@@ -805,14 +822,14 @@ public class LNUnitBuilder : IDisposable
     public async Task<LNDSimpleHtlcInterceptorHandler> GetInterceptor(string alias)
     {
         if (!InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor doesn't exist");
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
         return InterceptorHandlers[alias];
     }
 
     public async Task DelayAllHTLCsOnAlias(string alias, int delayMilliseconds)
     {
         if (InterceptorHandlers.ContainsKey(alias)) throw new Exception("Interceptor already attached");
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
         var nodeClone = node.Clone();
         InterceptorHandlers.Add(alias, new LNDSimpleHtlcInterceptorHandler(nodeClone, async x =>
         {
@@ -828,7 +845,7 @@ public class LNUnitBuilder : IDisposable
 
     public async Task<PolicyUpdateResponse> UpdateChannelPolicyOnAlias(string alias, PolicyUpdateRequest req)
     {
-        var node = await GetNodeFromAlias(alias);
+        var node = await GetNodeFromAlias(alias).ConfigureAwait(false);
         var policyUpdateResponse = node.LightningClient.UpdateChannelPolicy(
             req);
         return policyUpdateResponse;
@@ -846,7 +863,7 @@ public class LNUnitBuilder : IDisposable
             MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
             MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
             TimeLockDelta = c.TimeLockDelta
-        });
+        }).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -881,7 +898,7 @@ public class LNUnitBuilder : IDisposable
 
     public async Task NewBlock(int count = 1)
     {
-        await BitcoinRpcClient.GenerateAsync(count);
+        await BitcoinRpcClient.GenerateAsync(count).ConfigureAwait(false);
     }
 }
 
@@ -889,7 +906,8 @@ public static class LNUnitBuilderExtensions
 {
     public static async Task<string?> GetGitlabRunnerNetworkId(this DockerClient _client)
     {
-        var listContainers = await _client.Containers.ListContainersAsync(new ContainersListParameters());
+        var listContainers = await _client.Containers.ListContainersAsync(new ContainersListParameters())
+            .ConfigureAwait(false);
         var x = listContainers.FirstOrDefault(x =>
             x.Labels.Any(y => y.Key == "com.gitlab.gitlab-runner.type" && y.Value == "build") && x.State == "running");
         if (x != null)

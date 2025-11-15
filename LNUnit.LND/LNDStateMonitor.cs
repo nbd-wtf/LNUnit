@@ -31,7 +31,7 @@ public class LNDStateMonitor
             using (var streamingEvents = Node.StateClient.SubscribeState(new SubscribeStateRequest()))
             {
                 Running = true;
-                while (await streamingEvents.ResponseStream.MoveNext())
+                while (await streamingEvents.ResponseStream.MoveNext().ConfigureAwait(false))
                 {
                     var state = streamingEvents.ResponseStream.Current;
                     OnStateChange?.Invoke(state);

@@ -37,10 +37,10 @@ public static class DockerHelper
             //     Password = "pa$$w0rd"
             // },
             null,
-            p);
+            p).ConfigureAwait(false);
 
         while (!done)
-            await Task.Delay(1);
+            await Task.Delay(50).ConfigureAwait(false);
     }
 
     public static async Task RemoveContainer(this DockerClient client, string name, bool removeLinks = false)
@@ -48,7 +48,7 @@ public static class DockerHelper
         try
         {
             await client.Containers.StopContainerAsync(name,
-                new ContainerStopParameters { WaitBeforeKillSeconds = 0 });
+                new ContainerStopParameters { WaitBeforeKillSeconds = 0 }).ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -58,7 +58,8 @@ public static class DockerHelper
         try
         {
             await client.Containers.RemoveContainerAsync(name,
-                new ContainerRemoveParameters { Force = true, RemoveVolumes = true, RemoveLinks = removeLinks });
+                    new ContainerRemoveParameters { Force = true, RemoveVolumes = true, RemoveLinks = removeLinks })
+                .ConfigureAwait(false);
         }
         catch (Exception e)
         {
@@ -86,7 +87,7 @@ public static class DockerHelper
             Name = $"{baseName}_{randomString}",
             Driver = "bridge",
             CheckDuplicate = true
-        });
+        }).ConfigureAwait(false);
         return networksCreateResponse.ID;
     }
 
@@ -97,7 +98,7 @@ public static class DockerHelper
         await client.Images.BuildImageFromDockerfileAsync(new ImageBuildParameters
         {
             Tags = tags
-        }, tarStream, null, null, p);
+        }, tarStream, null, null, p).ConfigureAwait(false);
     }
 
     public static MemoryStream MakeDockerTarFromFolder(this string path)

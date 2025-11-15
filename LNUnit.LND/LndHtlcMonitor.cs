@@ -31,7 +31,7 @@ public class LndHtlcMonitor
             using (var streamingEvents = Node.RouterClient.SubscribeHtlcEvents(new SubscribeHtlcEventsRequest()))
             {
                 Running = true;
-                while (await streamingEvents.ResponseStream.MoveNext())
+                while (await streamingEvents.ResponseStream.MoveNext().ConfigureAwait(false))
                 {
                     var htlcEvent = streamingEvents.ResponseStream.Current;
                     OnHtlcEvent(htlcEvent);
