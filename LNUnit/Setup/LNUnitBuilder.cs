@@ -135,7 +135,7 @@ public class LNUnitBuilder : IDisposable
             var success =
                 await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters())
                     .ConfigureAwait(false);
-            //await Task.Delay(500).ConfigureAwait(false);
+            await Task.Delay(500).ConfigureAwait(false);
             //Setup wallet and basic funds
             var listContainers = await _dockerClient.Containers.ListContainersAsync(new ContainersListParameters())
                 .ConfigureAwait(false);
@@ -144,7 +144,7 @@ public class LNUnitBuilder : IDisposable
                 bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
             WaitForBitcoinNodeStartupTimeout = 30000;
             BitcoinRpcClient.HttpClient = new HttpClient
-            { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
+                { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
 
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true })
                 .ConfigureAwait(false);
@@ -536,7 +536,7 @@ public class LNUnitBuilder : IDisposable
     private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode)
     {
         var retryCount = 0;
-    do_again:
+        do_again:
         try
         {
             node.LightningClient.ConnectPeer(new ConnectPeerRequest
@@ -640,75 +640,75 @@ public class LNUnitBuilder : IDisposable
             var node = await WaitUntilAliasIsServerReady(alias).ConfigureAwait(false);
             //reset channels
             foreach (var nodes in Configuration.LNDNodes.Where(x => x.Name == alias))
-                foreach (var c in nodes.Channels)
+            foreach (var c in nodes.Channels)
+            {
+                var remoteNode = LNDNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
+                //Connect Peers
+                //We are doing this above now
+                await ConnectPeers(node, remoteNode).ConfigureAwait(false);
+
+                //Wait until we are synced to the chain so we know we have funds secured to send
+                var info = new GetInfoResponse();
+                while (!info.SyncedToChain && !info.SyncedToGraph)
                 {
-                    var remoteNode = LNDNodePool.ReadyNodes.First(x => x.LocalAlias == c.RemoteName);
-                    //Connect Peers
-                    //We are doing this above now
-                    await ConnectPeers(node, remoteNode).ConfigureAwait(false);
-
-                    //Wait until we are synced to the chain so we know we have funds secured to send
-                    var info = new GetInfoResponse();
-                    while (!info.SyncedToChain && !info.SyncedToGraph)
-                    {
-                        info = await node.LightningClient.GetInfoAsync(new GetInfoRequest()).ConfigureAwait(false);
-                        await Task.Delay(250);
-                    }
-
-                    info = new GetInfoResponse();
-                    while (!info.SyncedToChain && !info.SyncedToGraph)
-                    {
-                        info = await remoteNode.LightningClient.GetInfoAsync(new GetInfoRequest()).ConfigureAwait(false);
-                        await Task.Delay(250);
-                    }
-
-                    await WaitGraphReady(alias, LNDNodePool.TotalNodes).ConfigureAwait(false);
-                    if (resetChannels)
-                    {
-                        var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
-                        {
-                            NodePubkey = ByteString.CopyFrom(Convert.FromHexString(remoteNode.LocalNodePubKey)),
-                            SatPerVbyte = 10,
-                            LocalFundingAmount = c.ChannelSize,
-                            PushSat = c.RemotePushOnStart
-                        }).ConfigureAwait(false);
-                        c.ChannelPoint = channelPoint;
-                        //Move things along so it is confirmed
-                        await BitcoinRpcClient.GenerateAsync(10).ConfigureAwait(false);
-                        await WaitUntilSyncedToChain(alias).ConfigureAwait(false);
-                        await WaitGraphReady(alias, LNDNodePool.TotalNodes).ConfigureAwait(false);
-                        //Set fees & htlcs, TLD
-                        var policySet = false;
-                        var hitcount = 0;
-                        while (!policySet)
-                            try
-                            {
-                                var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
-                                    new PolicyUpdateRequest
-                                    {
-                                        BaseFeeMsat = c.BaseFeeMsat.GetValueOrDefault(),
-                                        ChanPoint = channelPoint,
-                                        FeeRatePpm = c.FeeRatePpm.GetValueOrDefault(),
-                                        MinHtlcMsat = c.MinHtlcMsat.GetValueOrDefault(),
-                                        MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
-                                        MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
-                                        TimeLockDelta = c.TimeLockDelta
-                                    }).ConfigureAwait(false);
-                                policySet = true;
-                            }
-                            catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
-                                                         e.Status.Detail.EqualsIgnoreCase(
-                                                             "channel from self node has no policy"))
-                            {
-                                if (hitcount == 0)
-                                    //generate blocks so we do a status update for sure.
-                                    await BitcoinRpcClient.GenerateAsync(145).ConfigureAwait(false);
-
-                                hitcount++;
-                                await Task.Delay(500).ConfigureAwait(false); //give it some time
-                            }
-                    }
+                    info = await node.LightningClient.GetInfoAsync(new GetInfoRequest()).ConfigureAwait(false);
+                    await Task.Delay(250);
                 }
+
+                info = new GetInfoResponse();
+                while (!info.SyncedToChain && !info.SyncedToGraph)
+                {
+                    info = await remoteNode.LightningClient.GetInfoAsync(new GetInfoRequest()).ConfigureAwait(false);
+                    await Task.Delay(250);
+                }
+
+                await WaitGraphReady(alias, LNDNodePool.TotalNodes).ConfigureAwait(false);
+                if (resetChannels)
+                {
+                    var channelPoint = await node.LightningClient.OpenChannelSyncAsync(new OpenChannelRequest
+                    {
+                        NodePubkey = ByteString.CopyFrom(Convert.FromHexString(remoteNode.LocalNodePubKey)),
+                        SatPerVbyte = 10,
+                        LocalFundingAmount = c.ChannelSize,
+                        PushSat = c.RemotePushOnStart
+                    }).ConfigureAwait(false);
+                    c.ChannelPoint = channelPoint;
+                    //Move things along so it is confirmed
+                    await BitcoinRpcClient.GenerateAsync(10).ConfigureAwait(false);
+                    await WaitUntilSyncedToChain(alias).ConfigureAwait(false);
+                    await WaitGraphReady(alias, LNDNodePool.TotalNodes).ConfigureAwait(false);
+                    //Set fees & htlcs, TLD
+                    var policySet = false;
+                    var hitcount = 0;
+                    while (!policySet)
+                        try
+                        {
+                            var policyUpdateResponse = await node.LightningClient.UpdateChannelPolicyAsync(
+                                new PolicyUpdateRequest
+                                {
+                                    BaseFeeMsat = c.BaseFeeMsat.GetValueOrDefault(),
+                                    ChanPoint = channelPoint,
+                                    FeeRatePpm = c.FeeRatePpm.GetValueOrDefault(),
+                                    MinHtlcMsat = c.MinHtlcMsat.GetValueOrDefault(),
+                                    MinHtlcMsatSpecified = c.MinHtlcMsat.HasValue,
+                                    MaxHtlcMsat = c.MaxHtlcMsat.GetValueOrDefault(),
+                                    TimeLockDelta = c.TimeLockDelta
+                                }).ConfigureAwait(false);
+                            policySet = true;
+                        }
+                        catch (RpcException e) when (e.Status.StatusCode == StatusCode.Unknown &&
+                                                     e.Status.Detail.EqualsIgnoreCase(
+                                                         "channel from self node has no policy"))
+                        {
+                            if (hitcount == 0)
+                                //generate blocks so we do a status update for sure.
+                                await BitcoinRpcClient.GenerateAsync(145).ConfigureAwait(false);
+
+                            hitcount++;
+                            await Task.Delay(500).ConfigureAwait(false); //give it some time
+                        }
+                }
+            }
 
             //   await Task.Delay(2500).ConfigureAwait(false);
         }

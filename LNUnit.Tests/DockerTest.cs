@@ -4,6 +4,7 @@ using LNUnit.Setup;
 
 namespace LNUnit.Tests.Abstract;
 
+[Ignore("only local")]
 public class DockerTest
 {
     private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
