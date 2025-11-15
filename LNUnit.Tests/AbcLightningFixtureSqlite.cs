@@ -5,8 +5,8 @@ using LNUnit.Tests.Abstract;
 namespace LNUnit.Tests;
 
 //[Ignore("only local")]
-[TestFixture("sqlite", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
-//[TestFixture("sqlite", "lightninglabs/lnd", "v0.19.3-beta", "/root/.lnd", true)]
+//[TestFixture("sqlite", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+[TestFixture("sqlite", "lightninglabs/lnd", "v0.20.0-beta", "/root/.lnd", true)]
 public class AbcLightningAbstractTestsSqlite : AbcLightningAbstractTests
 {
     public AbcLightningAbstractTestsSqlite(string dbType = "sqlite",
