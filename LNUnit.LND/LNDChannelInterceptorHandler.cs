@@ -18,11 +18,12 @@ public class LNDChannelInterceptorHandler
     {
         using (var streamingEvents = Node.LightningClient.ChannelAcceptor())
         {
-            while (await streamingEvents.ResponseStream.MoveNext())
+            while (await streamingEvents.ResponseStream.MoveNext().ConfigureAwait(false))
             {
                 var channelRequest = streamingEvents.ResponseStream.Current;
                 var response = OnChannelRequest?.Invoke(channelRequest);
-                if (response != null) await streamingEvents.RequestStream.WriteAsync(await response);
+                if (response != null)
+                    await streamingEvents.RequestStream.WriteAsync(await response).ConfigureAwait(false);
             }
         }
     }

@@ -21,14 +21,14 @@ public class LNDCustomMessageHandler
             Data = m.Data,
             Peer = m.Peer,
             Type = m.Type
-        });
+        }).ConfigureAwait(false);
     }
 
     private async Task ListenForCustomMessages()
     {
         using (var streamingEvents = Node.LightningClient.SubscribeCustomMessages(new SubscribeCustomMessagesRequest()))
         {
-            while (await streamingEvents.ResponseStream.MoveNext())
+            while (await streamingEvents.ResponseStream.MoveNext().ConfigureAwait(false))
             {
                 var message = streamingEvents.ResponseStream.Current;
                 OnMessage?.Invoke(Node, message);

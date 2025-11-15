@@ -135,13 +135,13 @@ public class LNDNodePool : IDisposable
         _rpcCheckTimer = _quickStartupMode
             ? new PeriodicTimer(TimeSpan.FromMilliseconds(100))
             : new PeriodicTimer(_updateReadyStatesPeriod);
-        Task.Run(async () => await UpdateReadyStates(), _cancellationTokenSource.Token);
+        Task.Run(async () => await UpdateReadyStates().ConfigureAwait(false), _cancellationTokenSource.Token);
         _logger?.LogDebug("UpdateReadyStates: Task Started.");
     }
 
     private async Task UpdateReadyStates() //TIMER
     {
-        while (await _rpcCheckTimer!.WaitForNextTickAsync(_cancellationTokenSource.Token))
+        while (await _rpcCheckTimer!.WaitForNextTickAsync(_cancellationTokenSource.Token).ConfigureAwait(false))
         {
             _logger?.LogDebug("UpdateReadyStates: Starting. Quick: {QuickMode}", _quickStartupMode);
             SetupNotYetInitializedNodes();
@@ -228,13 +228,13 @@ public class LNDNodePool : IDisposable
         //Get all channels across pool
         //Filter for all cross-links
         //select origin from all with >50% balance
-        var rebalanceTasks = await GetInteralNodeEvenBalaceTasks(this, deltaThreshold);
+        var rebalanceTasks = await GetInteralNodeEvenBalaceTasks(this, deltaThreshold).ConfigureAwait(false);
         var stats = new PoolRebalanceStats();
         foreach (var t in rebalanceTasks)
         {
             var src = ReadyNodes.First(x => x.LocalNodePubKey == t.SrcPk);
             var dest = ReadyNodes.First(x => x.LocalNodePubKey == t.DestPk);
-            var paymentHash = await InvoicePayRebalance(src, dest, t.Amount, _logger, t.ChanId);
+            var paymentHash = await InvoicePayRebalance(src, dest, t.Amount, _logger, t.ChanId).ConfigureAwait(false);
             if (!paymentHash.IsNullOrEmpty())
             {
                 //update stats
@@ -243,7 +243,7 @@ public class LNDNodePool : IDisposable
                 //Updated PaymentHash info
                 t.PaymentHash = Convert.FromHexString(paymentHash!);
                 //write to db
-                if (SaveRebalanceAction != null) await SaveRebalanceAction(t);
+                if (SaveRebalanceAction != null) await SaveRebalanceAction(t).ConfigureAwait(false);
                 stats.Tasks.Add(t);
             }
         }
@@ -276,7 +276,7 @@ public class LNDNodePool : IDisposable
                 Value = valueInSataoshis,
                 Memo = "InvoicePayRebalance",
                 Expiry = 60 //1 minute
-            });
+            }).ConfigureAwait(false);
             logger?.LogDebug("InvoicePayRebalance: {PaymentRequest} for {Value} sats from {Source}",
                 invoice.PaymentRequest, valueInSataoshis, src.LocalAlias);
 
@@ -288,7 +288,7 @@ public class LNDNodePool : IDisposable
             };
             if (channelId != 0) payment.OutgoingChanIds.Add(channelId);
             var streamingCallResponse = src.RouterClient.SendPaymentV2(payment);
-            await streamingCallResponse.ResponseStream.MoveNext();
+            await streamingCallResponse.ResponseStream.MoveNext().ConfigureAwait(false);
             // var response = streamingCallResponse.ResponseStream.Current.Status == Payment.Types.PaymentStatus.Succeeded;
             logger?.LogDebug(
                 "InvoicePayRebalance: {PaymentRequest} for {Value} sats from {Source} paid by {PaymentHash}",
@@ -322,7 +322,7 @@ public class LNDNodePool : IDisposable
             {
                 ActiveOnly = true,
                 PeerAliasLookup = false
-            });
+            }).ConfigureAwait(false);
             //Filter to channels with internal pool peers
             var poolPeerChannels =
                 activeChannels.Channels.Where(x => ourPoolMemberPKs.Contains(x.RemotePubkey)).ToList();
