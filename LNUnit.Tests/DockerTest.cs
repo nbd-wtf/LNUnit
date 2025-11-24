@@ -4,7 +4,7 @@ using LNUnit.Setup;
 
 namespace LNUnit.Tests.Abstract;
 
-[Ignore("only local")]
+//[Ignore("only local")]
 public class DockerTest
 {
     private readonly DockerClient _client = new DockerClientConfiguration().CreateClient();
@@ -116,14 +116,6 @@ public class DockerTest
             new List<string> { "custom_lnd", "custom_lnd:latest" });
     }
 
-    // [Test]
-    // [Category("Docker")]
-    // public async Task BuildBitcoin_27_0_rc1_DockerImage()
-    // {
-    //     await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/27.0rc1",
-    //         new List<string> { "bitcoin:27.0rc1" });
-    // }
-
 
     [Test]
     [Category("Docker")]
@@ -132,23 +124,6 @@ public class DockerTest
         await _client.GetGitlabRunnerNetworkId();
     }
 
-    // public string GetIPAddress()
-    // {
-    //     string IPAddress = "";
-    //     IPHostEntry Host = default(IPHostEntry);
-    //     string Hostname = null;
-    //     Hostname = System.Environment.MachineName;
-    //     Host = Dns.GetHostEntry(Hostname);
-    //     foreach (IPAddress IP in Host.AddressList)
-    //     {
-    //         if (IP.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-    //         {
-    //             IPAddress = Convert.ToString(IP);
-    //         }
-    //     }
-    //
-    //     return IPAddress;
-    // }
 
     [Test]
     [Category("Docker")]
