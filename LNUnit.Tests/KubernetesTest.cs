@@ -1,5 +1,6 @@
 using k8s;
 using k8s.Models;
+using LNUnit.Setup;
 
 namespace LNUnit.Tests.Abstract;
 
@@ -14,11 +15,16 @@ public class KubernetesTest
     {
         // Load kubeconfig from default location or KUBECONFIG env var
         var config = KubernetesClientConfiguration.BuildConfigFromConfigFile();
+
+        // Skip SSL validation for development (fixes exec API SSL issues on macOS/OrbStack)
+        config.SkipTlsVerify = true;
+
         _client = new Kubernetes(config);
 
         // Verify connection by getting version
         var version = await _client.Version.GetCodeAsync().ConfigureAwait(false);
         Console.WriteLine($"Connected to Kubernetes {version.GitVersion}");
+        Console.WriteLine($"SSL Verification: {(config.SkipTlsVerify ? "Disabled (Dev Mode)" : "Enabled")}");
     }
 
     [OneTimeTearDown]
@@ -451,6 +457,110 @@ public class KubernetesTest
             {
                 await _client.CoreV1.DeleteNamespaceAsync(namespaceName, gracePeriodSeconds: 0).ConfigureAwait(false);
                 Console.WriteLine($"Deleted namespace: {namespaceName}");
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+        }
+    }
+
+    [Test]
+    [Category("Kubernetes")]
+    public async Task TestFileExtraction_TextFile()
+    {
+        var namespaceName = "default";
+        var podName = $"test-file-extract-{GetRandomHexString(4)}";
+
+        try
+        {
+            // Create a pod using KubernetesHelper
+            await _client.CreatePodAndWaitForRunning(
+                namespaceName,
+                podName,
+                "busybox",
+                "latest",
+                command: new List<string> { "sh", "-c", "echo 'Hello from Kubernetes!' > /tmp/test.txt && sleep 30" },
+                labels: new Dictionary<string, string> { { "app", podName } },
+                timeoutSeconds: 30
+            ).ConfigureAwait(false);
+
+            Console.WriteLine($"Pod {podName} is running");
+
+            // Wait a bit for the file to be created
+            await Task.Delay(2000).ConfigureAwait(false);
+
+            // Extract the text file using KubernetesHelper
+            var fileContent = await _client.ExecAndReadTextFile(
+                namespaceName,
+                podName,
+                podName,
+                "/tmp/test.txt"
+            ).ConfigureAwait(false);
+
+            Console.WriteLine($"Extracted text file content: {fileContent.Trim()}");
+
+            // Verify the content
+            Assert.That(fileContent.Trim(), Is.EqualTo("Hello from Kubernetes!"));
+        }
+        finally
+        {
+            try
+            {
+                await _client.RemovePod(namespaceName, podName, gracePeriodSeconds: 0).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
+        }
+    }
+
+    [Test]
+    [Category("Kubernetes")]
+    public async Task TestFileExtraction_BinaryFile()
+    {
+        var namespaceName = "default";
+        var podName = $"test-binary-extract-{GetRandomHexString(4)}";
+        var testData = new byte[] { 0x48, 0x65, 0x6C, 0x6C, 0x6F }; // "Hello" in hex
+
+        try
+        {
+            // Create a pod that writes binary data
+            await _client.CreatePodAndWaitForRunning(
+                namespaceName,
+                podName,
+                "busybox",
+                "latest",
+                command: new List<string> { "sh", "-c", "printf '\\x48\\x65\\x6C\\x6C\\x6F' > /tmp/binary.dat && sleep 30" },
+                labels: new Dictionary<string, string> { { "app", podName } },
+                timeoutSeconds: 30
+            ).ConfigureAwait(false);
+
+            Console.WriteLine($"Pod {podName} is running");
+
+            // Wait for the file to be created
+            await Task.Delay(2000).ConfigureAwait(false);
+
+            // Extract the binary file using KubernetesHelper
+            var binaryContent = await _client.ExecAndReadBinaryFile(
+                namespaceName,
+                podName,
+                podName,
+                "/tmp/binary.dat"
+            ).ConfigureAwait(false);
+
+            Console.WriteLine($"Extracted {binaryContent.Length} bytes from binary file");
+            Console.WriteLine($"Content: {BitConverter.ToString(binaryContent)}");
+
+            // Verify the content
+            Assert.That(binaryContent, Is.EqualTo(testData));
+        }
+        finally
+        {
+            try
+            {
+                await _client.RemovePod(namespaceName, podName, gracePeriodSeconds: 0).ConfigureAwait(false);
             }
             catch
             {
