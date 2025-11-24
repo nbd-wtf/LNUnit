@@ -542,14 +542,36 @@ public class LNUnitBuilder : IDisposable
 
     private async Task<byte[]> GetBytesFromFS(string containerId, string filePath)
     {
-        return await _orchestrator.ExtractBinaryFileAsync(containerId, filePath)
-            .ConfigureAwait(false);
+        // Retry until file exists (container may be starting up)
+        while (true)
+        {
+            try
+            {
+                return await _orchestrator.ExtractBinaryFileAsync(containerId, filePath)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+            }
+        }
     }
 
     private async Task<string> GetStringFromFS(string containerId, string filePath)
     {
-        return await _orchestrator.ExtractTextFileAsync(containerId, filePath)
-            .ConfigureAwait(false);
+        // Retry until file exists (container may be starting up)
+        while (true)
+        {
+            try
+            {
+                return await _orchestrator.ExtractTextFileAsync(containerId, filePath)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception)
+            {
+                await Task.Delay(100).ConfigureAwait(false);
+            }
+        }
     }
 
     private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode)
