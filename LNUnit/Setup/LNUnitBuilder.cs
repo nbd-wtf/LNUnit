@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using Docker.DotNet;
 using Docker.DotNet.Models;
@@ -23,7 +24,7 @@ namespace LNUnit.Setup;
 
 public class LNUnitBuilder : IDisposable
 {
-    private readonly DockerClient _dockerClient = new DockerClientConfiguration().CreateClient();
+    private readonly IContainerOrchestrator _orchestrator;
     private readonly ILogger<LNUnitBuilder>? _logger;
     private readonly IServiceProvider? _serviceProvider;
     private bool _loopLNDReady;
@@ -31,12 +32,26 @@ public class LNUnitBuilder : IDisposable
 
     public Dictionary<string, LNDSimpleHtlcInterceptorHandler> InterceptorHandlers = new();
 
-    public LNUnitBuilder(LNUnitNetworkDefinition c = null, ILogger<LNUnitBuilder>? logger = null,
-        IServiceProvider serviceProvider = null)
+    // New primary constructor with orchestrator parameter
+    public LNUnitBuilder(
+        IContainerOrchestrator? orchestrator = null,
+        LNUnitNetworkDefinition? config = null,
+        ILogger<LNUnitBuilder>? logger = null,
+        IServiceProvider? serviceProvider = null)
     {
-        Configuration = c ?? new LNUnitNetworkDefinition();
+        _orchestrator = orchestrator ?? new DockerOrchestrator();
+        Configuration = config ?? new LNUnitNetworkDefinition();
         _logger = logger;
         _serviceProvider = serviceProvider;
+    }
+
+    // Legacy constructor for backward compatibility
+    public LNUnitBuilder(
+        LNUnitNetworkDefinition? c = null,
+        ILogger<LNUnitBuilder>? logger = null,
+        IServiceProvider? serviceProvider = null)
+        : this(null, c, logger, serviceProvider)
+    {
     }
 
     public int WaitForBitcoinNodeStartupTimeout { get; set; } = 30_000; //ms timeout
@@ -49,11 +64,17 @@ public class LNUnitBuilder : IDisposable
 
     public void Dispose()
     {
-        _dockerClient.Dispose();
+        _orchestrator?.Dispose();
         if (LNDNodePool != null)
             LNDNodePool.Dispose();
     }
 
+    // Helper method to generate network name with random suffix
+    private static string GenerateNetworkName(string baseName)
+    {
+        var randomHex = Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLower();
+        return $"{baseName}_{randomHex}";
+    }
 
     public static async Task<LNUnitBuilder> LoadConfigurationFile(string path)
     {
@@ -78,22 +99,18 @@ public class LNUnitBuilder : IDisposable
 
         foreach (var n in Configuration.BTCNodes.Where(x => !x.DockerContainerId.IsEmpty()))
         {
-            var result = await _dockerClient.Containers.StopContainerAsync(n.DockerContainerId,
-                new ContainerStopParameters { WaitBeforeKillSeconds = 1 }).ConfigureAwait(false);
-            await _dockerClient.Containers.RemoveContainerAsync(n.DockerContainerId,
-                new ContainerRemoveParameters { Force = true, RemoveVolumes = true }).ConfigureAwait(false);
+            await _orchestrator.StopContainerAsync(n.DockerContainerId, waitSeconds: 1).ConfigureAwait(false);
+            await _orchestrator.RemoveContainerAsync(n.DockerContainerId, removeVolumes: true).ConfigureAwait(false);
         }
 
         foreach (var n in Configuration.LNDNodes.Where(x => !x.DockerContainerId.IsEmpty()))
         {
-            var result = await _dockerClient.Containers.StopContainerAsync(n.DockerContainerId,
-                new ContainerStopParameters { WaitBeforeKillSeconds = 1 }).ConfigureAwait(false);
-            await _dockerClient.Containers.RemoveContainerAsync(n.DockerContainerId,
-                new ContainerRemoveParameters { Force = true, RemoveVolumes = true }).ConfigureAwait(false);
+            await _orchestrator.StopContainerAsync(n.DockerContainerId, waitSeconds: 1).ConfigureAwait(false);
+            await _orchestrator.RemoveContainerAsync(n.DockerContainerId, removeVolumes: true).ConfigureAwait(false);
         }
 
         if (destoryNetwork)
-            await _dockerClient.Networks.DeleteNetworkAsync(Configuration.DockerNetworkId).ConfigureAwait(false);
+            await _orchestrator.DeleteNetworkAsync(Configuration.DockerNetworkId).ConfigureAwait(false);
         IsDestoryed = true;
     }
 
@@ -111,37 +128,39 @@ public class LNUnitBuilder : IDisposable
 
         //Setup network
         if (setupNetwork)
-            Configuration.DockerNetworkId =
-                await _dockerClient.BuildTestingNetwork(Configuration.BaseName).ConfigureAwait(false);
+        {
+            var networkName = GenerateNetworkName(Configuration.BaseName);
+            Configuration.DockerNetworkId = await _orchestrator.CreateNetworkAsync(networkName).ConfigureAwait(false);
+        }
 
         //Setup BTC Nodes
 
-        ContainerListResponse bitcoinNode;
         foreach (var n in Configuration.BTCNodes) //TODO: can do multiple at once
         {
-            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag).ConfigureAwait(false);
-            var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
+            if (n.PullImage) await _orchestrator.PullImageAsync(n.Image, n.Tag).ConfigureAwait(false);
+
+            var containerInfo = await _orchestrator.CreateContainerAsync(new ContainerCreateOptions
             {
-                Image = $"{n.Image}:{n.Tag}",
-                HostConfig = new HostConfig
-                {
-                    NetworkMode = $"{Configuration.DockerNetworkId}"
-                },
                 Name = n.Name,
-                Hostname = n.Name,
-                Cmd = n.Cmd
+                Image = n.Image,
+                Tag = n.Tag,
+                NetworkId = Configuration.DockerNetworkId,
+                Command = n.Cmd,
+                Environment = null,
+                Binds = null,
+                Links = null,
+                Labels = new Dictionary<string, string> { { "lnunit", "bitcoin" } }
             }).ConfigureAwait(false);
-            n.DockerContainerId = nodeContainer.ID;
-            var success =
-                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters())
-                    .ConfigureAwait(false);
+
+            n.DockerContainerId = containerInfo.Id;
+            await _orchestrator.StartContainerAsync(containerInfo.Id).ConfigureAwait(false);
             await Task.Delay(500).ConfigureAwait(false);
+
             //Setup wallet and basic funds
-            var listContainers = await _dockerClient.Containers.ListContainersAsync(new ContainersListParameters())
-                .ConfigureAwait(false);
-            bitcoinNode = listContainers.First(x => x.ID == nodeContainer.ID);
-            BitcoinRpcClient = new RPCClient("bitcoin:bitcoin",
-                bitcoinNode.NetworkSettings.Networks.First().Value.IPAddress, Bitcoin.Instance.Regtest);
+            var inspectedContainer = await _orchestrator.InspectContainerAsync(n.DockerContainerId).ConfigureAwait(false);
+            var ipAddress = inspectedContainer.IpAddress;
+
+            BitcoinRpcClient = new RPCClient("bitcoin:bitcoin", ipAddress, Bitcoin.Instance.Regtest);
             WaitForBitcoinNodeStartupTimeout = 30000;
             BitcoinRpcClient.HttpClient = new HttpClient
             { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
@@ -153,42 +172,37 @@ public class LNUnitBuilder : IDisposable
 
 
         var lndSettings = new List<LNDSettings>();
-        CreateContainerResponse? loopServer = null;
+        string? loopServerId = null;
 
         if (Configuration.LoopServer != null)
         {
             var n = Configuration.LoopServer;
-            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag).ConfigureAwait(false);
-            var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
+            if (n.PullImage) await _orchestrator.PullImageAsync(n.Image, n.Tag).ConfigureAwait(false);
+
+            var containerInfo = await _orchestrator.CreateContainerAsync(new ContainerCreateOptions
             {
-                Image = $"{n.Image}:{n.Tag}",
-                HostConfig = new HostConfig
-                {
-                    NetworkMode = $"{Configuration.DockerNetworkId}",
-                    Links = new List<string> { n.BitcoinBackendName }
-                },
                 Name = n.Name,
-                Hostname = n.Name,
-                Cmd = n.Cmd
+                Image = n.Image,
+                Tag = n.Tag,
+                NetworkId = Configuration.DockerNetworkId,
+                Command = n.Cmd,
+                Environment = null,
+                Binds = null,
+                Links = new List<string> { n.BitcoinBackendName },
+                Labels = new Dictionary<string, string> { { "lnunit", "loop-lnd" } }
             }).ConfigureAwait(false);
-            n.DockerContainerId = nodeContainer.ID;
-            var success =
-                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters())
-                    .ConfigureAwait(false);
-            var inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId)
-                .ConfigureAwait(false);
-            var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
+
+            n.DockerContainerId = containerInfo.Id;
+            await _orchestrator.StartContainerAsync(containerInfo.Id).ConfigureAwait(false);
+
+            var inspectedContainer = await _orchestrator.InspectContainerAsync(n.DockerContainerId).ConfigureAwait(false);
+            var ipAddress = inspectedContainer.IpAddress;
 
             var txt = await GetStringFromFS(n.DockerContainerId, $"{lndRoot}/tls.cert").ConfigureAwait(false);
             var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
             var data = await GetBytesFromFS(n.DockerContainerId,
                 $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon").ConfigureAwait(false);
             var adminMacaroonBase64String = Convert.ToBase64String(data);
-
-
-            var adminMacaroonTar =
-                await GetTarStreamFromFS(n.DockerContainerId,
-                    $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon").ConfigureAwait(false);
 
             var lndConfig = new LNDSettings
             {
@@ -200,24 +214,27 @@ public class LNUnitBuilder : IDisposable
             foreach (var dependentContainer in n.DependentContainers)
             {
                 if (dependentContainer.PullImage)
-                    await _dockerClient.PullImageAndWaitForCompleted(dependentContainer.Image, dependentContainer.Tag)
+                    await _orchestrator.PullImageAsync(dependentContainer.Image, dependentContainer.Tag)
                         .ConfigureAwait(false);
 
-                loopServer = await _dockerClient.Containers.CreateContainerAsync(new CreateContainerParameters
+                var depContainerInfo = await _orchestrator.CreateContainerAsync(new ContainerCreateOptions
                 {
-                    Image = $"{dependentContainer.Image}:{dependentContainer.Tag}",
-                    HostConfig = new HostConfig
-                    {
-                        NetworkMode = $"{Configuration.DockerNetworkId}",
-                        Links = new List<string> { n.BitcoinBackendName, "loopserver-lnd", "alice" },
-                        Binds = dependentContainer.Binds
-                    },
                     Name = dependentContainer.Name,
-                    Hostname = dependentContainer.Name,
-                    Cmd = dependentContainer.Cmd,
-                    ExposedPorts = dependentContainer.ExposedPorts
+                    Image = dependentContainer.Image,
+                    Tag = dependentContainer.Tag,
+                    NetworkId = Configuration.DockerNetworkId,
+                    Command = dependentContainer.Cmd,
+                    Environment = null,
+                    Binds = dependentContainer.Binds,
+                    Links = new List<string> { n.BitcoinBackendName, "loopserver-lnd", "alice" },
+                    Labels = new Dictionary<string, string> { { "lnunit", "loopserver" } },
+                    ExposedPorts = dependentContainer.ExposedPorts?.Keys
+                        .Select(portStr => int.Parse(portStr.Split('/')[0]))
+                        .ToList()
                 }).ConfigureAwait(false);
-                dependentContainer.DockerContainerId = nodeContainer.ID;
+
+                loopServerId = depContainerInfo.Id;
+                dependentContainer.DockerContainerId = depContainerInfo.Id;
                 var dataReadonly = await GetBytesFromFS(n.DockerContainerId,
                     $"{lndRoot}/data/chain/bitcoin/regtest/readonly.macaroon");
                 var readonlyBase64String = Convert.ToBase64String(dataReadonly);
@@ -247,42 +264,41 @@ public class LNUnitBuilder : IDisposable
                     walletkit);
                 File.WriteAllBytes("./loopserver-test/router.macaroon",
                     router);
-                var success2 =
-                    await _dockerClient.Containers.StartContainerAsync(loopServer?.ID,
-                        new ContainerStartParameters()).ConfigureAwait(false);
+
+                if (loopServerId != null)
+                    await _orchestrator.StartContainerAsync(loopServerId).ConfigureAwait(false);
             }
         }
 
         //Setup LND Nodes
         foreach (var n in Configuration.LNDNodes) //TODO: can do multiple at once
         {
-            if (n.PullImage) await _dockerClient.PullImageAndWaitForCompleted(n.Image, n.Tag).ConfigureAwait(false);
-            var createContainerParameters = new CreateContainerParameters
+            if (n.PullImage) await _orchestrator.PullImageAsync(n.Image, n.Tag).ConfigureAwait(false);
+
+            var containerInfo = await _orchestrator.CreateContainerAsync(new ContainerCreateOptions
             {
-                Image = $"{n.Image}:{n.Tag}",
-                HostConfig = new HostConfig
-                {
-                    NetworkMode = $"{Configuration.DockerNetworkId}",
-                    Links = new List<string> { n.BitcoinBackendName }
-                },
                 Name = n.Name,
-                Hostname = n.Name,
-                Cmd = n.Cmd
-            };
-            if (n.Binds.Any()) createContainerParameters.HostConfig.Binds = n.Binds;
-            var nodeContainer = await _dockerClient.Containers.CreateContainerAsync(createContainerParameters)
-                .ConfigureAwait(false);
-            n.DockerContainerId = nodeContainer.ID;
-            var success =
-                await _dockerClient.Containers.StartContainerAsync(nodeContainer.ID, new ContainerStartParameters());
-            //Not always having IP yet.
+                Image = n.Image,
+                Tag = n.Tag,
+                NetworkId = Configuration.DockerNetworkId,
+                Command = n.Cmd,
+                Environment = null,
+                Binds = n.Binds.Any() ? n.Binds : null,
+                Links = new List<string> { n.BitcoinBackendName },
+                Labels = new Dictionary<string, string> { { "lnunit", "lnd" } }
+            }).ConfigureAwait(false);
+
+            n.DockerContainerId = containerInfo.Id;
+            await _orchestrator.StartContainerAsync(containerInfo.Id).ConfigureAwait(false);
+
+            //Not always having IP yet - poll until available
             var ipAddress = string.Empty;
-            ContainerInspectResponse? inspectionResponse = null;
             while (ipAddress.IsEmpty())
             {
-                inspectionResponse = await _dockerClient.Containers.InspectContainerAsync(n.DockerContainerId)
-                    .ConfigureAwait(false);
-                ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
+                var inspectedContainer = await _orchestrator.InspectContainerAsync(n.DockerContainerId).ConfigureAwait(false);
+                ipAddress = inspectedContainer.IpAddress ?? string.Empty;
+                if (ipAddress.IsEmpty())
+                    await Task.Delay(100).ConfigureAwait(false);
             }
 
             var basePath =
@@ -433,31 +449,21 @@ public class LNUnitBuilder : IDisposable
 
     public async Task<LNDSettings> GetLNDSettingsFromContainer(string containerId, string lndRoot = "/home/lnd/.lnd")
     {
-        var inspectionResponse =
-            await _dockerClient.Containers.InspectContainerAsync(containerId).ConfigureAwait(false);
-        while (!inspectionResponse.State.Running)
+        var containerInfo = await _orchestrator.InspectContainerAsync(containerId).ConfigureAwait(false);
+        while (containerInfo.State != "Running")
         {
-            await Task.Delay(250);
-            inspectionResponse =
-                await _dockerClient.Containers.InspectContainerAsync(containerId).ConfigureAwait(false);
+            await Task.Delay(250).ConfigureAwait(false);
+            containerInfo = await _orchestrator.InspectContainerAsync(containerId).ConfigureAwait(false);
         }
 
-        var ipAddress = inspectionResponse.NetworkSettings.Networks.First().Value.IPAddress;
-        var foundFile = false;
+        var ipAddress = containerInfo.IpAddress;
 
-        GetArchiveFromContainerResponse? archResponse = null;
         //Wait until LND actually has files started
-
-
-        var tlsTar = await GetTarStreamFromFS(containerId, $"{lndRoot}/tls.cert").ConfigureAwait(false);
-        var txt = GetStringFromTar(tlsTar); //GetStringFromFS(containerId, "/home/lnd/.lnd/tls.cert");
+        var txt = await _orchestrator.ExtractTextFileAsync(containerId, $"{lndRoot}/tls.cert").ConfigureAwait(false);
         var tlsCertBase64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(txt));
 
-        var adminMacaroonTar =
-            await GetTarStreamFromFS(containerId, $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon")
-                .ConfigureAwait(false);
-        var data = GetBytesFromTar(
-            adminMacaroonTar);
+        var data = await _orchestrator.ExtractBinaryFileAsync(containerId,
+            $"{lndRoot}/data/chain/bitcoin/regtest/admin.macaroon").ConfigureAwait(false);
         var adminMacaroonBase64String = Convert.ToBase64String(data);
 
         return new LNDSettings
@@ -468,11 +474,20 @@ public class LNUnitBuilder : IDisposable
         };
     }
 
+    /// <summary>
+    /// Gets file stats from container filesystem.
+    /// NOTE: Docker-specific implementation. Only works with DockerOrchestrator.
+    /// </summary>
     public async Task<ContainerPathStatResponse?> GetFileSize(string containerId, string filePath)
     {
+        if (_orchestrator is not DockerOrchestrator dockerOrchestrator)
+        {
+            throw new NotSupportedException("GetFileSize is only supported with DockerOrchestrator");
+        }
+
         try
         {
-            var archResponse = await _dockerClient.Containers.GetArchiveFromContainerAsync(
+            var archResponse = await dockerOrchestrator.Client.Containers.GetArchiveFromContainerAsync(
                 containerId,
                 new GetArchiveFromContainerParameters
                 {
@@ -487,14 +502,20 @@ public class LNUnitBuilder : IDisposable
         return null;
     }
 
+    [Obsolete("Use orchestrator file methods instead")]
     private async Task<GetArchiveFromContainerResponse?> GetTarStreamFromFS(string containerId, string filePath)
     {
+        if (_orchestrator is not DockerOrchestrator dockerOrchestrator)
+        {
+            throw new NotSupportedException("GetTarStreamFromFS is only supported with DockerOrchestrator");
+        }
+
         var foundFile = false;
         while (!foundFile)
         {
             try
             {
-                var archResponse = await _dockerClient.Containers.GetArchiveFromContainerAsync(
+                var archResponse = await dockerOrchestrator.Client.Containers.GetArchiveFromContainerAsync(
                     containerId,
                     new GetArchiveFromContainerParameters
                     {
@@ -514,23 +535,21 @@ public class LNUnitBuilder : IDisposable
 
     private async Task<bool> PutFile(string containerId, string filePath, Stream stream)
     {
-        await _dockerClient.Containers.ExtractArchiveToContainerAsync(containerId, new ContainerPathStatParameters
-        {
-            //  AllowOverwriteDirWithFile = true,
-            Path = filePath
-        }, stream).ConfigureAwait(false);
-
+        await _orchestrator.PutFileAsync(containerId, filePath, stream)
+            .ConfigureAwait(false);
         return true;
     }
 
     private async Task<byte[]> GetBytesFromFS(string containerId, string filePath)
     {
-        return GetBytesFromTar(await GetTarStreamFromFS(containerId, filePath).ConfigureAwait(false));
+        return await _orchestrator.ExtractBinaryFileAsync(containerId, filePath)
+            .ConfigureAwait(false);
     }
 
     private async Task<string> GetStringFromFS(string containerId, string filePath)
     {
-        return GetStringFromTar(await GetTarStreamFromFS(containerId, filePath).ConfigureAwait(false));
+        return await _orchestrator.ExtractTextFileAsync(containerId, filePath)
+            .ConfigureAwait(false);
     }
 
     private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode)
@@ -619,19 +638,13 @@ public class LNUnitBuilder : IDisposable
     public async Task<bool> ShutdownByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false)
     {
         if (isLND) LNDNodePool?.RemoveNode(await GetNodeFromAlias(alias));
-        return await _dockerClient.Containers.StopContainerAsync(alias, new ContainerStopParameters
-        {
-            WaitBeforeKillSeconds = waitBeforeKillSeconds
-        }).ConfigureAwait(false);
+        return await _orchestrator.StopContainerAsync(alias, waitSeconds: waitBeforeKillSeconds).ConfigureAwait(false);
     }
 
     public async Task RestartByAlias(string alias, uint waitBeforeKillSeconds = 1, bool isLND = false,
         bool resetChannels = true, string lndRoot = "/home/lnd/.lnd")
     {
-        await _dockerClient.Containers.RestartContainerAsync(alias, new ContainerRestartParameters
-        {
-            WaitBeforeKillSeconds = waitBeforeKillSeconds
-        }).ConfigureAwait(false);
+        await _orchestrator.RestartContainerAsync(alias, waitSeconds: waitBeforeKillSeconds).ConfigureAwait(false);
 
         if (isLND)
         {

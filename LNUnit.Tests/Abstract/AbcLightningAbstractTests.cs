@@ -96,6 +96,18 @@ public abstract class AbcLightningAbstractTests : IDisposable
         Log.Logger = loggerConfiguration.CreateLogger();
         services.AddLogging();
         services.AddSerilog(Log.Logger, true);
+
+        // Register orchestrator (defaults to Docker, can be overridden with UseKubernetes config)
+        var useKubernetes = configuration.GetValue<bool>("UseKubernetes", false);
+        if (useKubernetes)
+        {
+            services.AddSingleton<IContainerOrchestrator, KubernetesOrchestrator>();
+        }
+        else
+        {
+            services.AddSingleton<IContainerOrchestrator, DockerOrchestrator>();
+        }
+
         _serviceProvider = services.BuildServiceProvider();
         Builder = ActivatorUtilities.CreateInstance<LNUnitBuilder>(_serviceProvider);
 

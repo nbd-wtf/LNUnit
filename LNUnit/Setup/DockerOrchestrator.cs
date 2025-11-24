@@ -12,6 +12,11 @@ public class DockerOrchestrator : IContainerOrchestrator
 {
     private readonly DockerClient _client;
 
+    /// <summary>
+    /// Exposes the underlying Docker client for Docker-specific operations
+    /// </summary>
+    public DockerClient Client => _client;
+
     public DockerOrchestrator()
     {
         _client = new DockerClientConfiguration().CreateClient();
