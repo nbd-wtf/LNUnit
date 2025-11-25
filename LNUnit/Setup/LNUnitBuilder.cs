@@ -181,6 +181,9 @@ public class LNUnitBuilder : IDisposable
             BitcoinRpcClient.HttpClient = new HttpClient
             { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
 
+            // Wait for Bitcoin RPC to be ready (may take longer in Kubernetes)
+            await WaitForBitcoinRpcReady(BitcoinRpcClient, timeoutSeconds: 120).ConfigureAwait(false);
+
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true })
                 .ConfigureAwait(false);
             var utxos = await BitcoinRpcClient.GenerateAsync(200).ConfigureAwait(false);
@@ -588,6 +591,34 @@ public class LNUnitBuilder : IDisposable
                 await Task.Delay(100).ConfigureAwait(false);
             }
         }
+    }
+
+    /// <summary>
+    /// Waits for Bitcoin RPC to be ready by polling getblockchaininfo.
+    /// This is especially important in Kubernetes where startup is slower.
+    /// </summary>
+    private async Task WaitForBitcoinRpcReady(RPCClient rpcClient, int timeoutSeconds = 120)
+    {
+        var startTime = DateTime.UtcNow;
+        var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+
+        while (DateTime.UtcNow - startTime < timeout)
+        {
+            try
+            {
+                // Try a simple RPC call to check if bitcoind is ready
+                await rpcClient.GetBlockchainInfoAsync().ConfigureAwait(false);
+                _logger?.LogInformation("Bitcoin RPC is ready");
+                return;
+            }
+            catch (Exception)
+            {
+                // Not ready yet, wait and retry
+                await Task.Delay(1000).ConfigureAwait(false);
+            }
+        }
+
+        throw new TimeoutException($"Bitcoin RPC did not become ready within {timeoutSeconds} seconds");
     }
 
     private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode)
