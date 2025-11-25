@@ -48,11 +48,11 @@ jobs:
         run: |
           # Pre-pull commonly used images to speed up tests
           docker pull polarlightning/bitcoind:30.0 || true
-          docker pull lightninglabs/lnd:v0.30.0-beta || true 
+          docker pull lightninglabs/lnd:v0.20.0-beta || true 
 
           # Load images into kind cluster
           kind load docker-image polarlightning/bitcoind:30.0 --name lnunit-test || true
-          kind load docker-image lightninglabs/lnd:v0.30.0-beta --name lnunit-test || true 
+          kind load docker-image lightninglabs/lnd:v0.20.0-beta --name lnunit-test || true 
 
       - name: Restore dependencies
         run: dotnet restore
