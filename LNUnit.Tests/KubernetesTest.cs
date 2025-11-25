@@ -4,6 +4,7 @@ using LNUnit.Setup;
 
 namespace LNUnit.Tests.Abstract;
 
+[Ignore("only local")]
 [Category("Kubernetes")]
 public class KubernetesTest
 {
@@ -73,13 +74,13 @@ public class KubernetesTest
                 {
                     Containers = new List<V1Container>
                     {
-                        new V1Container
+                        new()
                         {
                             Name = "redis",
                             Image = "redis:5.0",
                             Ports = new List<V1ContainerPort>
                             {
-                                new V1ContainerPort { ContainerPort = 6379 }
+                                new() { ContainerPort = 6379 }
                             }
                         }
                     },
@@ -94,7 +95,8 @@ public class KubernetesTest
             await Task.Delay(2000).ConfigureAwait(false);
 
             // Verify pod exists
-            var retrievedPod = await _client.CoreV1.ReadNamespacedPodAsync(podName, namespaceName).ConfigureAwait(false);
+            var retrievedPod =
+                await _client.CoreV1.ReadNamespacedPodAsync(podName, namespaceName).ConfigureAwait(false);
             Assert.That(retrievedPod, Is.Not.Null);
             Console.WriteLine($"Pod {podName} created with status: {retrievedPod.Status.Phase}");
         }
@@ -103,7 +105,8 @@ public class KubernetesTest
             // Cleanup: Delete the pod
             try
             {
-                await _client.CoreV1.DeleteNamespacedPodAsync(podName, namespaceName, gracePeriodSeconds: 0).ConfigureAwait(false);
+                await _client.CoreV1.DeleteNamespacedPodAsync(podName, namespaceName, gracePeriodSeconds: 0)
+                    .ConfigureAwait(false);
             }
             catch
             {
@@ -130,7 +133,7 @@ public class KubernetesTest
                 {
                     Containers = new List<V1Container>
                     {
-                        new V1Container
+                        new()
                         {
                             Name = "redis",
                             Image = "redis:5.0",
@@ -149,7 +152,8 @@ public class KubernetesTest
         {
             try
             {
-                await _client.CoreV1.DeleteNamespacedPodAsync(podName, namespaceName, gracePeriodSeconds: 0).ConfigureAwait(false);
+                await _client.CoreV1.DeleteNamespacedPodAsync(podName, namespaceName, gracePeriodSeconds: 0)
+                    .ConfigureAwait(false);
             }
             catch
             {
@@ -243,7 +247,7 @@ public class KubernetesTest
                 {
                     Containers = new List<V1Container>
                     {
-                        new V1Container { Name = "redis", Image = "redis:5.0" }
+                        new() { Name = "redis", Image = "redis:5.0" }
                     },
                     RestartPolicy = "Never"
                 }
@@ -263,7 +267,7 @@ public class KubernetesTest
                 {
                     Containers = new List<V1Container>
                     {
-                        new V1Container { Name = "redis", Image = "redis:5.0" }
+                        new() { Name = "redis", Image = "redis:5.0" }
                     },
                     RestartPolicy = "Never"
                 }
@@ -344,7 +348,8 @@ public class KubernetesTest
                 }
             };
 
-            var createdPvc = await _client.CoreV1.CreateNamespacedPersistentVolumeClaimAsync(pvc, namespaceName).ConfigureAwait(false);
+            var createdPvc = await _client.CoreV1.CreateNamespacedPersistentVolumeClaimAsync(pvc, namespaceName)
+                .ConfigureAwait(false);
             Assert.That(createdPvc.Metadata.Name, Is.EqualTo(pvcName));
             Console.WriteLine($"Created PVC: {pvcName}");
 
@@ -359,14 +364,14 @@ public class KubernetesTest
                 {
                     Containers = new List<V1Container>
                     {
-                        new V1Container
+                        new()
                         {
                             Name = "writer",
                             Image = "busybox",
                             Command = new List<string> { "sh", "-c", $"echo '{testData}' > /data/test.txt && sleep 5" },
                             VolumeMounts = new List<V1VolumeMount>
                             {
-                                new V1VolumeMount
+                                new()
                                 {
                                     Name = "data-volume",
                                     MountPath = "/data"
@@ -376,7 +381,7 @@ public class KubernetesTest
                     },
                     Volumes = new List<V1Volume>
                     {
-                        new V1Volume
+                        new()
                         {
                             Name = "data-volume",
                             PersistentVolumeClaim = new V1PersistentVolumeClaimVolumeSource
@@ -396,7 +401,8 @@ public class KubernetesTest
             await Task.Delay(8000).ConfigureAwait(false);
 
             // Delete first pod
-            await _client.CoreV1.DeleteNamespacedPodAsync(podName1, namespaceName, gracePeriodSeconds: 0).ConfigureAwait(false);
+            await _client.CoreV1.DeleteNamespacedPodAsync(podName1, namespaceName, gracePeriodSeconds: 0)
+                .ConfigureAwait(false);
             Console.WriteLine($"Deleted pod {podName1}");
             await Task.Delay(3000).ConfigureAwait(false);
 
@@ -408,14 +414,14 @@ public class KubernetesTest
                 {
                     Containers = new List<V1Container>
                     {
-                        new V1Container
+                        new()
                         {
                             Name = "reader",
                             Image = "busybox",
                             Command = new List<string> { "sh", "-c", "cat /data/test.txt && sleep 5" },
                             VolumeMounts = new List<V1VolumeMount>
                             {
-                                new V1VolumeMount
+                                new()
                                 {
                                     Name = "data-volume",
                                     MountPath = "/data"
@@ -425,7 +431,7 @@ public class KubernetesTest
                     },
                     Volumes = new List<V1Volume>
                     {
-                        new V1Volume
+                        new()
                         {
                             Name = "data-volume",
                             PersistentVolumeClaim = new V1PersistentVolumeClaimVolumeSource
@@ -480,7 +486,7 @@ public class KubernetesTest
                 podName,
                 "busybox",
                 "latest",
-                command: new List<string> { "sh", "-c", "echo 'Hello from Kubernetes!' > /tmp/test.txt && sleep 30" },
+                new List<string> { "sh", "-c", "echo 'Hello from Kubernetes!' > /tmp/test.txt && sleep 30" },
                 labels: new Dictionary<string, string> { { "app", podName } },
                 timeoutSeconds: 30
             ).ConfigureAwait(false);
@@ -507,7 +513,7 @@ public class KubernetesTest
         {
             try
             {
-                await _client.RemovePod(namespaceName, podName, gracePeriodSeconds: 0).ConfigureAwait(false);
+                await _client.RemovePod(namespaceName, podName, 0).ConfigureAwait(false);
             }
             catch
             {
@@ -532,7 +538,7 @@ public class KubernetesTest
                 podName,
                 "busybox",
                 "latest",
-                command: new List<string> { "sh", "-c", "printf '\\x48\\x65\\x6C\\x6C\\x6F' > /tmp/binary.dat && sleep 30" },
+                new List<string> { "sh", "-c", "printf '\\x48\\x65\\x6C\\x6C\\x6F' > /tmp/binary.dat && sleep 30" },
                 labels: new Dictionary<string, string> { { "app", podName } },
                 timeoutSeconds: 30
             ).ConfigureAwait(false);
@@ -560,7 +566,7 @@ public class KubernetesTest
         {
             try
             {
-                await _client.RemovePod(namespaceName, podName, gracePeriodSeconds: 0).ConfigureAwait(false);
+                await _client.RemovePod(namespaceName, podName, 0).ConfigureAwait(false);
             }
             catch
             {

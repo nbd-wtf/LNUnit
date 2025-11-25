@@ -3,6 +3,7 @@ using LNUnit.Setup;
 
 namespace LNUnit.Tests.Abstract;
 
+[Ignore("only local")]
 [Category("Kubernetes")]
 public class KubernetesOrchestratorTest
 {
@@ -31,7 +32,6 @@ public class KubernetesOrchestratorTest
     {
         // Cleanup test namespace if it was created
         if (_testNamespace != null)
-        {
             try
             {
                 await _orchestrator.DeleteNetworkAsync(_testNamespace).ConfigureAwait(false);
@@ -41,7 +41,6 @@ public class KubernetesOrchestratorTest
             {
                 // Ignore cleanup errors
             }
-        }
 
         _orchestrator?.Dispose();
         _kubeClient?.Dispose();
@@ -284,7 +283,8 @@ public class KubernetesOrchestratorTest
             await Task.Delay(3000).ConfigureAwait(false);
 
             // Extract text file
-            var fileContent = await _orchestrator.ExtractTextFileAsync(containerName, "/tmp/test.txt").ConfigureAwait(false);
+            var fileContent = await _orchestrator.ExtractTextFileAsync(containerName, "/tmp/test.txt")
+                .ConfigureAwait(false);
 
             Assert.That(fileContent, Is.Not.Null.And.Not.Empty);
             Assert.That(fileContent.Trim(), Is.EqualTo(testContent));
@@ -321,7 +321,8 @@ public class KubernetesOrchestratorTest
                 Image = "busybox",
                 Tag = "latest",
                 NetworkId = namespaceId,
-                Command = new List<string> { "sh", "-c", "printf '\\x48\\x65\\x6C\\x6C\\x6F' > /tmp/binary.dat && sleep 30" }
+                Command = new List<string>
+                    { "sh", "-c", "printf '\\x48\\x65\\x6C\\x6C\\x6F' > /tmp/binary.dat && sleep 30" }
             };
 
             await _orchestrator.CreateContainerAsync(createOptions).ConfigureAwait(false);
@@ -331,7 +332,8 @@ public class KubernetesOrchestratorTest
             await Task.Delay(3000).ConfigureAwait(false);
 
             // Extract binary file
-            var binaryContent = await _orchestrator.ExtractBinaryFileAsync(containerName, "/tmp/binary.dat").ConfigureAwait(false);
+            var binaryContent = await _orchestrator.ExtractBinaryFileAsync(containerName, "/tmp/binary.dat")
+                .ConfigureAwait(false);
 
             Assert.That(binaryContent, Is.Not.Null);
             Assert.That(binaryContent, Is.EqualTo(testData));
@@ -381,7 +383,8 @@ public class KubernetesOrchestratorTest
             await Task.Delay(3000).ConfigureAwait(false);
 
             // Extract and verify environment variable was set
-            var fileContent = await _orchestrator.ExtractTextFileAsync(containerName, "/tmp/env.txt").ConfigureAwait(false);
+            var fileContent = await _orchestrator.ExtractTextFileAsync(containerName, "/tmp/env.txt")
+                .ConfigureAwait(false);
 
             Assert.That(fileContent, Does.Contain("TEST_VAR=test-value-123"));
             Console.WriteLine($"Environment variable verification: {fileContent.Trim()}");

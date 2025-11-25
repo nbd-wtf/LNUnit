@@ -28,6 +28,8 @@ jobs:
       - name: Build
         run: dotnet build --no-restore
       - name: Test
+        env:
+          UseKubernetes: false  # Use Docker in CI/CD
         run: |
           cdir=`pwd`
           cd LNUnit.Tests
