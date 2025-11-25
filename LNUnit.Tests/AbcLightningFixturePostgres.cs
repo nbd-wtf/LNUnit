@@ -2,9 +2,9 @@ using LNUnit.Tests.Abstract;
 
 namespace LNUnit.Tests.Fixture;
 
-[Ignore("only local")]
-//[TestFixture("postgres", "lightninglabs/lnd", "v0.18.3-beta", "/root/.lnd", true)]
-[TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
+//[Ignore("only local")]
+[TestFixture("postgres", "lightninglabs/lnd", "v0.20.0-beta", "/root/.lnd", true)]
+//[TestFixture("postgres", "custom_lnd", "latest", "/home/lnd/.lnd", false)]
 public class AbcLightningAbstractTestsPostgres : AbcLightningAbstractTests
 {
     public AbcLightningAbstractTestsPostgres(string dbType = "postgres",

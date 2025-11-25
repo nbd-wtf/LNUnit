@@ -130,10 +130,11 @@ public abstract class AbcLightningAbstractTests : IDisposable
         string bitcoinTag = "29.0",
         bool pullBitcoinImage = false)
     {
-        await _client.RemoveContainer("miner");
-        await _client.RemoveContainer("alice");
-        await _client.RemoveContainer("bob");
-        await _client.RemoveContainer("carol");
+        // Cleanup any existing containers from previous test runs (works with both Docker and Kubernetes)
+        await Builder.RemoveContainerByNameIfExists("miner");
+        await Builder.RemoveContainerByNameIfExists("alice");
+        await Builder.RemoveContainerByNameIfExists("bob");
+        await Builder.RemoveContainerByNameIfExists("carol");
 
         Builder.AddBitcoinCoreNode(image: bitcoinImage, tag: bitcoinTag, pullImage: pullBitcoinImage);
 
@@ -858,12 +859,12 @@ public abstract class AbcLightningAbstractTests : IDisposable
         $"Failed    : {fail_count}".Print();
         var successful_pps = success_count / (sw.ElapsedMilliseconds / 1000.0);
         $"Successful Payments per second: {successful_pps}".Print();
-        var size = await Builder.GetFileSize("alice", "/root/.lnd/data/graph/regtest/channel.db");
-        size.PrintDump();
-        size = await Builder.GetFileSize("bob", "/root/.lnd/data/graph/regtest/channel.db");
-        size.PrintDump();
-        size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
-        size.PrintDump();
+        // var size = await Builder.GetFileSize("alice", "/root/.lnd/data/graph/regtest/channel.db");
+        // size.PrintDump();
+        // size = await Builder.GetFileSize("bob", "/root/.lnd/data/graph/regtest/channel.db");
+        // size.PrintDump();
+        // size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
+        // size.PrintDump();
     }
 
     [Test]
@@ -1398,8 +1399,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             Reversed = true,
             PendingOnly = false
         });
-        Assert.That(li.Invoices.Count > 0);
-        Assert.That(li.Invoices.First().State == Invoice.Types.InvoiceState.Settled);
+        Assert.That(li.Invoices.Count , Is.GreaterThan(0));
+        Assert.That(li.Invoices.First().State , Is.EqualTo(Invoice.Types.InvoiceState.Settled));
     }
 
     public class PaymentStats

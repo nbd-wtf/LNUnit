@@ -114,6 +114,22 @@ public class LNUnitBuilder : IDisposable
         IsDestoryed = true;
     }
 
+    /// <summary>
+    /// Remove a container by name if it exists. Safe to call even if container doesn't exist.
+    /// Useful for cleaning up containers from previous test runs.
+    /// </summary>
+    public async Task RemoveContainerByNameIfExists(string containerName)
+    {
+        try
+        {
+            await _orchestrator.RemoveContainerAsync(containerName, removeVolumes: true).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Ignore if container doesn't exist
+        }
+    }
+
     public async Task Build(bool setupNetwork = false, string lndRoot = "/home/lnd/.lnd")
     {
         _logger?.LogInformation("Building LNUnit scenerio.");

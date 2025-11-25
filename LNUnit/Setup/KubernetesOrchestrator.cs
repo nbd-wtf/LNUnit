@@ -85,6 +85,8 @@ public class KubernetesOrchestrator : IContainerOrchestrator
             }
         }
 
+        var labels = options.Labels ?? new Dictionary<string, string> { { "app", options.Name } };
+
         var pod = await _client.CreatePodAndWaitForRunning(
             namespaceName,
             options.Name,
@@ -94,9 +96,12 @@ public class KubernetesOrchestrator : IContainerOrchestrator
             env: options.Environment,
             volumeMounts: volumeMounts,
             volumes: volumes,
-            labels: options.Labels ?? new Dictionary<string, string> { { "app", options.Name } },
+            labels: labels,
             timeoutSeconds: 60
         ).ConfigureAwait(false);
+
+        // Create a headless service for DNS resolution (mimics Docker's container name resolution)
+        await CreateHeadlessServiceForPod(namespaceName, options.Name, labels).ConfigureAwait(false);
 
         return new ContainerInfo
         {
@@ -129,6 +134,17 @@ public class KubernetesOrchestrator : IContainerOrchestrator
         try
         {
             var (namespaceName, podName) = await GetPodNamespaceAndName(containerId).ConfigureAwait(false);
+
+            // Delete the service first
+            try
+            {
+                await _client.CoreV1.DeleteNamespacedServiceAsync(podName, namespaceName).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ignore if service doesn't exist
+            }
+
             await _client.RemovePod(namespaceName, podName, gracePeriodSeconds: (int)waitSeconds).ConfigureAwait(false);
             return true;
         }
@@ -143,6 +159,17 @@ public class KubernetesOrchestrator : IContainerOrchestrator
         try
         {
             var (namespaceName, podName) = await GetPodNamespaceAndName(containerId).ConfigureAwait(false);
+
+            // Delete the service first
+            try
+            {
+                await _client.CoreV1.DeleteNamespacedServiceAsync(podName, namespaceName).ConfigureAwait(false);
+            }
+            catch
+            {
+                // Ignore if service doesn't exist
+            }
+
             await _client.RemovePod(namespaceName, podName, gracePeriodSeconds: 0).ConfigureAwait(false);
         }
         catch
@@ -336,5 +363,46 @@ public class KubernetesOrchestrator : IContainerOrchestrator
         }
 
         return (pod.Metadata.NamespaceProperty, pod.Metadata.Name);
+    }
+
+    /// <summary>
+    /// Creates a headless service for a pod to enable DNS resolution by pod name.
+    /// This mimics Docker's behavior where container names are automatically DNS-resolvable.
+    /// </summary>
+    private async Task CreateHeadlessServiceForPod(string namespaceName, string podName, Dictionary<string, string> labels)
+    {
+        try
+        {
+            var service = new V1Service
+            {
+                Metadata = new V1ObjectMeta
+                {
+                    Name = podName,
+                    Labels = labels
+                },
+                Spec = new V1ServiceSpec
+                {
+                    ClusterIP = "None", // Headless service
+                    Selector = labels,
+                    Ports = new List<V1ServicePort>
+                    {
+                        // Add a dummy port to satisfy Kubernetes requirements
+                        new V1ServicePort
+                        {
+                            Name = "default",
+                            Port = 1,
+                            TargetPort = 1,
+                            Protocol = "TCP"
+                        }
+                    }
+                }
+            };
+
+            await _client.CoreV1.CreateNamespacedServiceAsync(service, namespaceName).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // Ignore if service already exists or creation fails
+        }
     }
 }
