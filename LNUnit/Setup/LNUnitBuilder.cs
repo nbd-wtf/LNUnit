@@ -182,7 +182,7 @@ public class LNUnitBuilder : IDisposable
             { Timeout = TimeSpan.FromMilliseconds(WaitForBitcoinNodeStartupTimeout) };
 
             // Wait for Bitcoin RPC to be ready (may take longer in Kubernetes)
-            await WaitForBitcoinRpcReady(BitcoinRpcClient, timeoutSeconds: 120).ConfigureAwait(false);
+            await WaitForBitcoinRpcReady(BitcoinRpcClient, timeoutSeconds: 180).ConfigureAwait(false);
 
             await BitcoinRpcClient.CreateWalletAsync("default", new CreateWalletOptions { LoadOnStartup = true })
                 .ConfigureAwait(false);
@@ -601,24 +601,39 @@ public class LNUnitBuilder : IDisposable
     {
         var startTime = DateTime.UtcNow;
         var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+        var attemptCount = 0;
+        Exception? lastException = null;
+
+        _logger?.LogInformation($"Waiting for Bitcoin RPC at {rpcClient.Address} to be ready (timeout: {timeoutSeconds}s)...");
 
         while (DateTime.UtcNow - startTime < timeout)
         {
             try
             {
+                attemptCount++;
                 // Try a simple RPC call to check if bitcoind is ready
                 await rpcClient.GetBlockchainInfoAsync().ConfigureAwait(false);
-                _logger?.LogInformation("Bitcoin RPC is ready");
+                var elapsed = DateTime.UtcNow - startTime;
+                _logger?.LogInformation($"Bitcoin RPC is ready after {elapsed.TotalSeconds:F1}s ({attemptCount} attempts)");
                 return;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                lastException = ex;
+                // Log every 10 seconds to show progress
+                if (attemptCount % 10 == 0)
+                {
+                    var elapsed = DateTime.UtcNow - startTime;
+                    _logger?.LogWarning($"Bitcoin RPC not ready yet after {elapsed.TotalSeconds:F1}s ({attemptCount} attempts). Last error: {ex.Message}");
+                }
                 // Not ready yet, wait and retry
                 await Task.Delay(1000).ConfigureAwait(false);
             }
         }
 
-        throw new TimeoutException($"Bitcoin RPC did not become ready within {timeoutSeconds} seconds");
+        var totalElapsed = DateTime.UtcNow - startTime;
+        _logger?.LogError($"Bitcoin RPC did not become ready within {timeoutSeconds}s. Total attempts: {attemptCount}. Last error: {lastException?.Message}");
+        throw new TimeoutException($"Bitcoin RPC at {rpcClient.Address} did not become ready within {timeoutSeconds} seconds after {attemptCount} attempts. Last error: {lastException?.Message}", lastException);
     }
 
     private async Task ConnectPeers(LNDNodeConnection node, LNDNodeConnection remoteNode)
