@@ -1399,8 +1399,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             Reversed = true,
             PendingOnly = false
         });
-        Assert.That(li.Invoices.Count , Is.GreaterThan(0));
-        Assert.That(li.Invoices.First().State , Is.EqualTo(Invoice.Types.InvoiceState.Settled));
+        Assert.That(li.Invoices.Count, Is.GreaterThan(0));
+        Assert.That(li.Invoices.First().State, Is.EqualTo(Invoice.Types.InvoiceState.Settled));
     }
 
     public class PaymentStats
