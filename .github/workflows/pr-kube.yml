@@ -1,0 +1,105 @@
+name: Kubernetes Tests
+
+on:
+  pull_request:
+    branches: [ main, master, develop ]
+  push:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+jobs:
+  test-kubernetes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      UseKubernetes: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: 1
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 1
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
+          cluster_name: lnunit-test
+          wait: 120s
+
+      - name: Verify Kubernetes cluster
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl version
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          kind get kubeconfig --name lnunit-test > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Load Docker images to kind
+        run: |
+          # Pre-pull commonly used images to speed up tests
+          docker pull polarlightning/bitcoind:30.0 || true
+          docker pull lightninglabs/lnd:v0.30.0-beta || true 
+
+          # Load images into kind cluster
+          kind load docker-image polarlightning/bitcoind:30.0 --name lnunit-test || true
+          kind load docker-image lightninglabs/lnd:v0.30.0-beta --name lnunit-test || true 
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Run Kubernetes orchestrator tests
+        run: |
+          cd LNUnit.Tests
+          dotnet test --no-build --configuration Release \
+            --filter "FullyQualifiedName~KubernetesOrchestratorTest" \
+            --verbosity normal \
+            --logger "console;verbosity=detailed"
+
+      - name: Run ABC scenario tests (Kubernetes)
+        if: success() || failure()
+        run: |
+          cd LNUnit.Tests
+          dotnet test --no-build --configuration Release \
+            --filter "FullyQualifiedName~AbcLightningAbstractTests" \
+            --verbosity normal \
+            --logger "console;verbosity=detailed"
+        timeout-minutes: 20
+
+      - name: Cleanup Kubernetes resources
+        if: always()
+        run: |
+          kubectl get namespaces | grep -E "test-network|unit-test" | awk '{print $1}' | xargs -r kubectl delete namespace || true
+
+      - name: Collect logs on failure
+        if: failure()
+        run: |
+          echo "=== Kubernetes Pods ==="
+          kubectl get pods --all-namespaces
+
+          echo "=== Kubernetes Services ==="
+          kubectl get services --all-namespaces
+
+          echo "=== Kubernetes Events ==="
+          kubectl get events --all-namespaces --sort-by='.lastTimestamp'
+
+          echo "=== Pod Logs ==="
+          for ns in $(kubectl get namespaces -o jsonpath='{.items[*].metadata.name}' | grep -E "test-network|unit-test"); do
+            echo "Namespace: $ns"
+            for pod in $(kubectl get pods -n $ns -o jsonpath='{.items[*].metadata.name}'); do
+              echo "Pod: $pod"
+              kubectl logs -n $ns $pod --tail=100 || true
+            done
+          done

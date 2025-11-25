@@ -12,7 +12,7 @@
 
     <ItemGroup>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
-        <PackageReference Include="KubernetesClient" Version="15.2.0"/>
+        <PackageReference Include="KubernetesClient" Version="18.0.5" />
         <PackageReference Include="Google.Protobuf" Version="3.33.1"/>
         <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0"/>
         <PackageReference Include="Grpc.Net.Client" Version="2.71.0"/>

@@ -115,16 +115,16 @@ public abstract class AbcLightningAbstractTests : IDisposable
             PostgresFixture.AddDb("carol");
         }
 
-        await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0",
-            ["bitcoin:latest", "bitcoin:30.0"]);
+        // await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
+        // await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0",
+        //     ["bitcoin:latest", "bitcoin:30.0"]);
         await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, "bitcoin", "30.0");
     }
 
 
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
         string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "polarlightning/bitcoind",
-        string bitcoinTag = "29.0",
+        string bitcoinTag = "30.0",
         bool pullBitcoinImage = false)
     {
         // Cleanup any existing containers from previous test runs (works with both Docker and Kubernetes)

@@ -40,7 +40,7 @@ public static class KubernetesHelper
                         Name = podName,
                         Image = $"{image}:{tag}",
                         Command = command,
-                        Env = env?.Select(kvp => new V1EnvVar(kvp.Key, kvp.Value)).ToList(),
+                        Env = env?.Select(kvp => new V1EnvVar{ Name = kvp.Key, Value = kvp.Value}).ToList(),
                         VolumeMounts = volumeMounts
                     }
                 },
