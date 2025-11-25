@@ -704,10 +704,10 @@ public abstract class AbcLightningAbstractTests : IDisposable
         //Close
         var close = alice.LightningClient.CloseChannel(new
             CloseChannelRequest
-            {
-                ChannelPoint = channelPoint,
-                SatPerVbyte = 10
-            });
+        {
+            ChannelPoint = channelPoint,
+            SatPerVbyte = 10
+        });
         //Move things along so it is confirmed
         await Builder.NewBlock(10);
         acceptorTasks.ForEach(x => x.Dispose());
