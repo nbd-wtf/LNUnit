@@ -89,6 +89,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
             .SetBasePath(Directory.GetCurrentDirectory()) // Set the current directory as the base path
             .AddJsonFile("appsettings.json", false, true)
             .AddJsonFile("appsettings.Development.json", false, true)
+            .AddEnvironmentVariables() //last will make this override.
             .Build();
         var services = new ServiceCollection();
         var loggerConfiguration = new LoggerConfiguration().Enrich.FromLogContext();
@@ -100,13 +101,9 @@ public abstract class AbcLightningAbstractTests : IDisposable
         // Register orchestrator (defaults to Docker, can be overridden with UseKubernetes config)
         var useKubernetes = configuration.GetValue<bool>("UseKubernetes", false);
         if (useKubernetes)
-        {
             services.AddSingleton<IContainerOrchestrator, KubernetesOrchestrator>();
-        }
         else
-        {
             services.AddSingleton<IContainerOrchestrator, DockerOrchestrator>();
-        }
 
         _serviceProvider = services.BuildServiceProvider();
         Builder = ActivatorUtilities.CreateInstance<LNUnitBuilder>(_serviceProvider);
@@ -707,10 +704,10 @@ public abstract class AbcLightningAbstractTests : IDisposable
         //Close
         var close = alice.LightningClient.CloseChannel(new
             CloseChannelRequest
-        {
-            ChannelPoint = channelPoint,
-            SatPerVbyte = 10
-        });
+            {
+                ChannelPoint = channelPoint,
+                SatPerVbyte = 10
+            });
         //Move things along so it is confirmed
         await Builder.NewBlock(10);
         acceptorTasks.ForEach(x => x.Dispose());
