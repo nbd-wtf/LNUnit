@@ -89,6 +89,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
             .SetBasePath(Directory.GetCurrentDirectory()) // Set the current directory as the base path
             .AddJsonFile("appsettings.json", false, true)
             .AddJsonFile("appsettings.Development.json", false, true)
+            .AddEnvironmentVariables() //last will make this override.
             .Build();
         var services = new ServiceCollection();
         var loggerConfiguration = new LoggerConfiguration().Enrich.FromLogContext();
@@ -96,6 +97,14 @@ public abstract class AbcLightningAbstractTests : IDisposable
         Log.Logger = loggerConfiguration.CreateLogger();
         services.AddLogging();
         services.AddSerilog(Log.Logger, true);
+
+        // Register orchestrator (defaults to Docker, can be overridden with UseKubernetes config)
+        var useKubernetes = configuration.GetValue<bool>("UseKubernetes", false);
+        if (useKubernetes)
+            services.AddSingleton<IContainerOrchestrator, KubernetesOrchestrator>();
+        else
+            services.AddSingleton<IContainerOrchestrator, DockerOrchestrator>();
+
         _serviceProvider = services.BuildServiceProvider();
         Builder = ActivatorUtilities.CreateInstance<LNUnitBuilder>(_serviceProvider);
 
@@ -106,22 +115,23 @@ public abstract class AbcLightningAbstractTests : IDisposable
             PostgresFixture.AddDb("carol");
         }
 
-        await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
-        await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0",
-            ["bitcoin:latest", "bitcoin:30.0"]);
-        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, "bitcoin", "30.0");
+        // await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
+        // await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0",
+        //     ["bitcoin:latest", "bitcoin:30.0"]);
+        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage);
     }
 
 
     public async Task SetupNetwork(string lndImage = "lightninglabs/lnd", string lndTag = "daily-testing-only",
         string lndRoot = "/root/.lnd", bool pullLndImage = false, string bitcoinImage = "polarlightning/bitcoind",
-        string bitcoinTag = "29.0",
+        string bitcoinTag = "30.0",
         bool pullBitcoinImage = false)
     {
-        await _client.RemoveContainer("miner");
-        await _client.RemoveContainer("alice");
-        await _client.RemoveContainer("bob");
-        await _client.RemoveContainer("carol");
+        // Cleanup any existing containers from previous test runs (works with both Docker and Kubernetes)
+        await Builder.RemoveContainerByNameIfExists("miner");
+        await Builder.RemoveContainerByNameIfExists("alice");
+        await Builder.RemoveContainerByNameIfExists("bob");
+        await Builder.RemoveContainerByNameIfExists("carol");
 
         Builder.AddBitcoinCoreNode(image: bitcoinImage, tag: bitcoinTag, pullImage: pullBitcoinImage);
 
@@ -846,12 +856,12 @@ public abstract class AbcLightningAbstractTests : IDisposable
         $"Failed    : {fail_count}".Print();
         var successful_pps = success_count / (sw.ElapsedMilliseconds / 1000.0);
         $"Successful Payments per second: {successful_pps}".Print();
-        var size = await Builder.GetFileSize("alice", "/root/.lnd/data/graph/regtest/channel.db");
-        size.PrintDump();
-        size = await Builder.GetFileSize("bob", "/root/.lnd/data/graph/regtest/channel.db");
-        size.PrintDump();
-        size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
-        size.PrintDump();
+        // var size = await Builder.GetFileSize("alice", "/root/.lnd/data/graph/regtest/channel.db");
+        // size.PrintDump();
+        // size = await Builder.GetFileSize("bob", "/root/.lnd/data/graph/regtest/channel.db");
+        // size.PrintDump();
+        // size = await Builder.GetFileSize("carol", "/root/.lnd/data/graph/regtest/channel.db");
+        // size.PrintDump();
     }
 
     [Test]
@@ -1386,8 +1396,8 @@ public abstract class AbcLightningAbstractTests : IDisposable
             Reversed = true,
             PendingOnly = false
         });
-        Assert.That(li.Invoices.Count > 0);
-        Assert.That(li.Invoices.First().State == Invoice.Types.InvoiceState.Settled);
+        Assert.That(li.Invoices.Count, Is.GreaterThan(0));
+        Assert.That(li.Invoices.First().State, Is.EqualTo(Invoice.Types.InvoiceState.Settled));
     }
 
     public class PaymentStats
