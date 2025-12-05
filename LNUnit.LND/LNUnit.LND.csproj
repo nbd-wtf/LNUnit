@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>LNUnit.LND</PackageId>
-        <Version>3.0.2</Version>
+        <Version>3.0.3</Version>
         <PackageDescription>LNUnit LND Typed Clients</PackageDescription>
         <TargetFramework>net10.0</TargetFramework>
         <LangVersion>14.0</LangVersion>
