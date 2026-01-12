@@ -28,9 +28,14 @@ jobs:
       - name: Build
         run: dotnet build --no-restore
       - name: Test
+        env:
+          UseKubernetes: false  # Use Docker in CI/CD
         run: |
           cdir=`pwd`
           cd LNUnit.Tests
+          # Pre-pull commonly used images to speed up tests
+          docker pull polarlightning/bitcoind:30.0 || true
+          docker pull lightninglabs/lnd:v0.20.0-beta || true 
           dotnet test --filter FullyQualifiedName~LNUnit.Test --no-build --verbosity normal -l "console;verbosity=detailed" --collect:"XPlat Code Coverage" --logger "trx;LogFileName=test-results.trx" --results-directory $cdir/coverage
       - name: Test Report
         uses: dorny/test-reporter@v1

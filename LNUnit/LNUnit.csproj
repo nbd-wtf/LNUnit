@@ -19,6 +19,7 @@
         <PackageReference Include="ServiceStack" Version="8.10.0"/>
         <PackageReference Include="SharpCompress" Version="0.40.0"/>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
+        <PackageReference Include="KubernetesClient" Version="18.0.5" />
     </ItemGroup>
 
     <ItemGroup>
