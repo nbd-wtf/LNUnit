@@ -12,36 +12,36 @@
 
     <ItemGroup>
         <PackageReference Include="Docker.DotNet" Version="3.125.15"/>
-        <PackageReference Include="Google.Protobuf" Version="3.33.1"/>
-        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.71.0"/>
-        <PackageReference Include="Grpc.Net.Client" Version="2.71.0"/>
-        <PackageReference Include="Grpc.Net.Common" Version="2.71.0"/>
+        <PackageReference Include="Google.Protobuf" Version="3.34.0"/>
+        <PackageReference Include="Grpc.Net.ClientFactory" Version="2.76.0"/>
+        <PackageReference Include="Grpc.Net.Client" Version="2.76.0"/>
+        <PackageReference Include="Grpc.Net.Common" Version="2.76.0"/>
 
-        <PackageReference Include="JunitXml.TestLogger" Version="7.0.2"/>
-        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.0"/>
-        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="10.0.0"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1"/>
+        <PackageReference Include="JunitXml.TestLogger" Version="8.0.0"/>
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.NetTopologySuite" Version="10.0.3"/>
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0"/>
         <!--        <PackageReference Include="NLightning.Bolt11" Version="4.0.0" />-->
-        <PackageReference Include="Npgsql" Version="9.0.4"/>
+        <PackageReference Include="Npgsql" Version="10.0.1"/>
         <PackageReference Include="NUnit" Version="3.14.0"/>
-        <PackageReference Include="NUnit3TestAdapter" Version="5.2.0"/>
+        <PackageReference Include="NUnit3TestAdapter" Version="6.1.0"/>
         <PackageReference Include="NUnit.Analyzers" Version="4.11.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="coverlet.collector" Version="6.0.4">
+        <PackageReference Include="coverlet.collector" Version="8.0.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="ServiceStack" Version="8.10.0"/>
+        <PackageReference Include="ServiceStack" Version="10.0.6"/>
         <PackageReference Include="SharpCompress" Version="0.41.0"/>
 
         <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0"/>
         <!--        <PackageReference Include="Serilog.Sinks.AwsCloudWatch" Version="4.0.182"/>-->
-        <PackageReference Include="Serilog.AspNetCore" Version="9.0.0"/>
+        <PackageReference Include="Serilog.AspNetCore" Version="10.0.0"/>
         <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1"/>
-        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.0"/>
+        <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="10.0.3"/>
     </ItemGroup>
 
     <ItemGroup>

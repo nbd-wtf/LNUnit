@@ -15,8 +15,8 @@ mkdir -p ./Grpc/peersrpc
 mkdir -p ./Grpc/looprpc
 mkdir -p ./Grpc/swapserverrpc
 
-LND_TAG=${1:-v0.20.0-beta}
-LOOP_TAG=${2:-v0.31.7-beta}
+LND_TAG=${1:-v0.20.1-beta}
+LOOP_TAG=${2:-v0.32.1-beta}
 
 
 wget -O ./Grpc/lightning.proto https://raw.githubusercontent.com/lightningnetwork/lnd/$LND_TAG/lnrpc/lightning.proto
@@ -36,4 +36,5 @@ wget -O ./Grpc/peersrpc/peers.proto https://raw.githubusercontent.com/lightningn
 wget -O ./Grpc/devrpc/dev.proto https://raw.githubusercontent.com/lightningnetwork/lnd/$LND_TAG/lnrpc/devrpc/dev.proto
 # loopd
 wget -O ./Grpc/looprpc/client.proto  https://raw.githubusercontent.com/lightninglabs/loop/$LOOP_TAG/looprpc/client.proto
+wget -O ./Grpc/looprpc/debug.proto  https://raw.githubusercontent.com/lightninglabs/loop/$LOOP_TAG/looprpc/debug.proto
 wget -O ./Grpc/swapserverrpc/common.proto  https://raw.githubusercontent.com/lightninglabs/loop/$LOOP_TAG/swapserverrpc/common.proto

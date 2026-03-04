@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "swapserverrpc/common.proto";
+import "lnrpc/lightning.proto";
 
 package looprpc;
 
@@ -37,6 +38,12 @@ service SwapClient {
     status.
     */
     rpc ListSwaps (ListSwapsRequest) returns (ListSwapsResponse);
+
+    /* loop: `sweephtlc`
+    SweepHtlc spends a swap HTLC output via the preimage (success) path using
+    the swap's known preimage or an optionally supplied one.
+    */
+    rpc SweepHtlc (SweepHtlcRequest) returns (SweepHtlcResponse);
 
     /* loop: `swapinfo`
     SwapInfo returns all known details about a single swap.
@@ -200,12 +207,33 @@ service SwapClient {
     rpc GetStaticAddressSummary (StaticAddressSummaryRequest)
         returns (StaticAddressSummaryResponse);
 
-    /* loop:`static`
+    /* loop:`static in`
     StaticAddressLoopIn initiates a static address loop-in swap.
     */
     rpc StaticAddressLoopIn (StaticAddressLoopInRequest)
         returns (StaticAddressLoopInResponse);
+
+    /* loop:`static openchannel`
+    StaticOpenChannel opens a channel funded by selected static address
+    deposits.
+    */
+    rpc StaticOpenChannel (StaticOpenChannelRequest)
+        returns (StaticOpenChannelResponse);
 }
+
+message StaticOpenChannelRequest {
+    // Wrap lnd's request so Loop can extend this RPC with Loop-specific fields
+    // without diverging from the upstream API surface.
+    lnrpc.OpenChannelRequest open_channel_request = 1;
+}
+
+message StaticOpenChannelResponse {
+    /*
+    The outpoint of the channel opening transaction in the format
+    "txid:output_index".
+    */
+    string channel_open_outpoint = 1;
+};
 
 message StopDaemonRequest {
 }
@@ -737,6 +765,61 @@ message ListSwapsResponse {
 
     // Timestamp to use for paging start_timestamp_ns.
     int64 next_start_time = 2;
+}
+
+// SweepHtlcRequest instructs loopd to sweep a swap HTLC via its success path.
+message SweepHtlcRequest {
+    // Optional override for the sweep destination; defaults to a new address
+    // derived from the connected lnd wallet.
+    string dest_address = 1;
+
+    // Fee rate used for the sweep transaction in sat/vByte.
+    uint32 sat_per_vbyte = 2;
+
+    // HTLC outpoint to sweep, formatted as "txid:vout".
+    string outpoint = 3;
+
+    // Optional override for the stored swap preimage.
+    bytes preimage = 4;
+
+    // If true, publish the sweep transaction immediately.
+    bool publish = 5;
+
+    // The HTLC address whose output is being swept; used to derive the
+    // expected pkScript.
+    string htlc_address = 6;
+}
+
+// SweepHtlcResponse returns the broadcast sweep transaction.
+message SweepHtlcResponse {
+    // Raw sweep transaction bytes.
+    bytes sweep_tx = 1;
+
+    // Miner fee paid by the sweep transaction.
+    uint64 fee_sats = 2;
+
+    // Publish outcome.
+    oneof publish {
+        PublishNotRequested not_requested = 3;
+        PublishSucceeded published = 4;
+        PublishFailed failed = 5;
+    }
+}
+
+// PublishNotRequested is returned by SweepHtlc if publishing was not requested
+// in SweepHtlcRequest.
+message PublishNotRequested {
+}
+
+// PublishSucceeded is returned by SweepHtlc if publishing was requested in
+// SweepHtlcRequest and it succeeded.
+message PublishSucceeded {
+}
+
+// PublishFailed is returned by SweepHtlc if publishing was requested in
+// SweepHtlcRequest, but failed. It includes the error message.
+message PublishFailed {
+    string error = 1;
 }
 
 message SwapInfoRequest {
@@ -1710,7 +1793,7 @@ message WithdrawDepositsRequest {
     /*
     The outpoints of the deposits to withdraw.
     */
-    repeated OutPoint outpoints = 1;
+    repeated lnrpc.OutPoint outpoints = 1;
 
     /*
     If set to true, all deposits will be withdrawn.
@@ -1747,23 +1830,6 @@ message WithdrawDepositsResponse {
     The destination address of the withdrawal transaction.
     */
     string address = 2;
-}
-
-message OutPoint {
-    /*
-    Raw bytes representing the transaction id.
-    */
-    bytes txid_bytes = 1;
-
-    /*
-    Reversed, hex-encoded string representing the transaction id.
-    */
-    string txid_str = 2;
-
-    /*
-    The index of the output on the transaction.
-    */
-    uint32 output_index = 3;
 }
 
 message ListStaticAddressDepositsRequest {
@@ -1853,6 +1919,11 @@ message StaticAddressSummaryResponse {
     The total value of all htlc timeout sweeps that the client swept.
     */
     int64 value_htlc_timeout_sweeps_satoshis = 9;
+
+    /*
+    The total value of all deposits that have been used for channel openings.
+    */
+    int64 value_channels_opened = 10;
 }
 
 enum DepositState {
@@ -1921,6 +1992,18 @@ enum DepositState {
     has been sufficiently confirmed.
     */
     EXPIRED = 10;
+
+    /*
+    OPENING_CHANNEL indicates that the channel open in which the deposit was
+    used is in progress.
+    */
+    OPENING_CHANNEL = 11;
+
+    /*
+    CHANNEL_PUBLISHED indicates that the channel open was finalized and
+    published and that it should be managed from lnd from now on.
+    */
+    CHANNEL_PUBLISHED = 12;
 }
 
 message Deposit {
