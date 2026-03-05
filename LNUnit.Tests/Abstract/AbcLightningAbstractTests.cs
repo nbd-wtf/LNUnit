@@ -44,7 +44,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         string lndImage = "custom_lnd",
         string tag = "latest",
         string lndRoot = "/root/.lnd",
-        bool pullImage = false
+        bool pullImage = true
     )
     {
         _dbType = dbType;
@@ -109,7 +109,7 @@ public abstract class AbcLightningAbstractTests : IDisposable
         await _client.CreateDockerImageFromPath("../../../../Docker/lnd", ["custom_lnd", "custom_lnd:latest"]);
         await _client.CreateDockerImageFromPath("./../../../../Docker/bitcoin/30.0",
             ["bitcoin:latest", "bitcoin:30.0"]);
-        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, "bitcoin", "30.0");
+        await SetupNetwork(_lndImage, _tag, _lndRoot, _pullImage, "lightninglabs/bitcoin-core", "latest");
     }
 
 
