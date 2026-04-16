@@ -5,20 +5,20 @@
         <Nullable>enable</Nullable>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>LNUnit.LND</PackageId>
-        <Version>3.0.4</Version>
+        <Version>3.0.5</Version>
         <PackageDescription>LNUnit LND Typed Clients</PackageDescription>
         <TargetFramework>net10.0</TargetFramework>
         <LangVersion>14.0</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Google.Protobuf" Version="3.34.0"/>
+        <PackageReference Include="Google.Protobuf" Version="3.34.1"/>
         <PackageReference Include="Grpc.Net.ClientFactory" Version="2.76.0"/>
-        <PackageReference Include="Grpc.Tools" Version="2.78.0">
+        <PackageReference Include="Grpc.Tools" Version="2.80.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="NBitcoin" Version="9.0.5"/>
+        <PackageReference Include="NBitcoin" Version="10.0.1"/>
         <PackageReference Include="ServiceStack.Text" Version="10.0.6"/>
     </ItemGroup>
     <ItemGroup>
